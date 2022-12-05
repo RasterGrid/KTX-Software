@@ -21,27 +21,31 @@ namespace ktx {
 //              Treat warnings as errors. Unset by default.
 class CommandValidate : public Command {
 public:
-    virtual void initializeOptions(std::vector<argparser::option>& long_opts, _tstring& short_opts) override {
-        (void) long_opts;
-        (void) short_opts;
+    void initializeOptions() {
     }
+
     virtual bool processOption(argparser& parser, int opt) override {
         (void) parser;
         (void) opt;
         return false;
     }
-    virtual void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) override {
+
+    void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) {
         (void) infiles;
         (void) outfile;
     }
+
     virtual int main(int argc, _TCHAR* argv[]) override {
         std::cout << "Hello, Validate" << std::endl;
-        (void) argc;
-        (void) argv;
+
+        initializeOptions();
+        processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone, 2);
+        processPositional(genericOptions.infiles, genericOptions.outfile);
+
         return EXIT_SUCCESS;
     }
 
-    inline CommandValidate() noexcept : Command(false) {}
+    using Command::Command;
     virtual ~CommandValidate() {};
 };
 

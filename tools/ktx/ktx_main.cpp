@@ -3,25 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-#include "ktxapp.h"
+#include "command.h"
 #include "utility.h"
-#include "version.h"
 
 #include <iostream>
 #include <map>
 #include <string>
 #include <string_view>
 
-#include "command.h"
-
-
-// -------------------------------------------------------------------------------------------------
-
-#define QUOTE(x) #x
-#define STR(x) QUOTE(x)
-
-std::string myversion(STR(KTX_VERSION));
-std::string mydefversion(STR(KTX_DEFAULT_VERSION));
 
 // -------------------------------------------------------------------------------------------------
 
@@ -29,7 +18,7 @@ namespace ktx {
 
 // TODO: Proper doxygen documentation
 // ktx validate <options> <input_file>
-//          --format: text | json
+//          --format: text | json | mini-json
 //              Output format. Defaults to text.
 //          --gltf-basisu
 //              Check compatibility with KHR_texture_basisu glTF extension. Unset by default.
@@ -37,7 +26,7 @@ namespace ktx {
 //              Treat warnings as errors. Unset by default.
 //
 // ktx info <options> <input_file>
-//          --format: text | json
+//          --format: text | json | mini-json
 //              Output format. Defaults to text.
 //
 // ktx transcode <options> <input_file> <output_file>
@@ -93,66 +82,62 @@ namespace ktx {
 //          --assign-primaries: <primaries>
 //          --convert-oetf: <oetf>
 //          --convert-primaries: <primaries
+//
+// ktx help <sub_command>
 
-class ktxTools : public ktxApp {
+class Tools : public Command {
 private:
-    commandOptions options;
     std::unique_ptr<Command> command;
 
 public:
-    explicit ktxTools();
-    virtual ~ktxTools() {};
+    Tools() {}
+    virtual ~Tools() {};
 
 public:
-    virtual int main(int argc, _TCHAR* argv[]) override;
     virtual bool processOption(argparser& parser, int opt) override {
-        return command->processOption(parser, opt);
+        (void) parser;
+        (void) opt;
+        // TODO: Parse --version
+        // TODO: Parse --help
+        return true;
     }
+    virtual int main(int argc, _TCHAR* argv[]) override;
 };
 
-ktxTools::ktxTools() : ktxApp(myversion, mydefversion, options) {
+int Tools::main(int argc, _TCHAR* argv[]) {
+    (void) argc;
+    (void) argv;
+    // TODO: Print usage, Failure: incorrect sub command {commandName}
+    std::cerr << "Print usage, Failure: incorrect sub command {commandName}" << std::endl;
+    return EXIT_FAILURE;
 }
 
-[[nodiscard]] std::unique_ptr<Command> createCommand(std::string_view name) {
-    using createFn = std::unique_ptr<Command>(*)();
+} // namespace ktx ---------------------------------------------------------------------------------
+
+[[nodiscard]] std::unique_ptr<ktx::Command> createCommand(std::string_view name) {
+    using createFn = std::unique_ptr<ktx::Command>(*)();
     std::map<std::string, createFn, std::less<>> commands;
 
-    commands.emplace("info", createCommandInfo);
-    commands.emplace("validate", createCommandValidate);
-    // commands.emplace("transcode", createCommandTranscode);
-    // commands.emplace("encode", createCommandEncode);
-    // commands.emplace("extract", createCommandExtract);
-    // commands.emplace("create", createCommandCreate);
+    commands.emplace("info", ktx::createCommandInfo);
+    commands.emplace("validate", ktx::createCommandValidate);
+    // commands.emplace("transcode", ktx::createCommandTranscode);
+    // commands.emplace("encode", ktx::createCommandEncode);
+    // commands.emplace("extract", ktx::createCommandExtract);
+    // commands.emplace("create", ktx::createCommandCreate);
+    // commands.emplace("help", ktx::createCommandHelp);
 
     const auto it = commands.find(name);
-    return it == commands.end() ? nullptr : (it->second)();
+    return it == commands.end() ? std::make_unique<ktx::Tools>() : (it->second)();
 }
 
-int ktxTools::main(int argc, _TCHAR* argv[]) {
+int _tmain(int argc, _TCHAR* argv[]) {
     if (argc < 2) {
         // TODO: Print usage, Failure: missing sub command
         std::cerr << "Print usage, Failure: missing sub command" << std::endl;
         return EXIT_FAILURE;
     }
 
-    const auto commandName = trim(argv[1]);
-    command = createCommand(commandName);
-    if (!command) {
-        // TODO: Print usage, Failure: incorrect sub command {commandName}
-        std::cerr << "Print usage, Failure: incorrect sub command {commandName}" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    command->initializeOptions(option_list, short_opts);
-    processCommandLine(argc, argv, eDisallowStdin, command->hasOutputFile ? eLast : eNone, 2);
-    command->processName = name;
-    command->processPositional(options.infiles, options.outfile);
+    const auto commandName = ktx::trim(argv[1]);
+    auto command = createCommand(commandName);
     return command->main(argc, argv);
-}
-
-} // namespace ktx ---------------------------------------------------------------------------------
-
-int _tmain(int argc, _TCHAR* argv[]) {
-    ktx::ktxTools theApp;
-    return theApp.main(argc, argv);
 }

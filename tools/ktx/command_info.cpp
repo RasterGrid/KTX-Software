@@ -10,7 +10,6 @@
 #include <iostream>
 
 #include "stdafx.h"
-#include "argparser.h"
 
 
 // -------------------------------------------------------------------------------------------------
@@ -38,12 +37,12 @@ class CommandInfo : public Command {
 public:
     // TODO: Support --version
     // TODO: Support --help with proper usage
-    virtual void initializeOptions(std::vector<argparser::option>& long_opts, _tstring& short_opts) override;
+    void initializeOptions();
     virtual bool processOption(argparser& parser, int opt) override;
-    virtual void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) override;
+    void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile);
     virtual int main(int argc, _TCHAR* argv[]) override;
 
-    inline CommandInfo() noexcept : Command(false) {}
+    using Command::Command;
     virtual ~CommandInfo() {};
 
 private:
@@ -56,8 +55,8 @@ std::unique_ptr<Command> createCommandInfo() {
 
 // -------------------------------------------------------------------------------------------------
 
-void CommandInfo::initializeOptions(std::vector<argparser::option>& long_opts, _tstring& short_opts) {
-    long_opts.emplace(long_opts.begin(), "format", argparser::option::required_argument, nullptr, 'f');
+void CommandInfo::initializeOptions() {
+    option_list.emplace(option_list.begin(), "format", argparser::option::required_argument, nullptr, 'f');
     short_opts += "f:";
 }
 
@@ -68,7 +67,7 @@ bool CommandInfo::processOption(argparser& parser, int opt) {
             options.format = Options::OutputFormat::text;
         } else if (parser.optarg == "json") {
             options.format = Options::OutputFormat::json;
-        } else if (parser.optarg == "json-mini") {
+        } else if (parser.optarg == "mini-json") {
             options.format = Options::OutputFormat::json_mini;
         } else {
             // TODO: Print usage, Failure: unsupported format
@@ -96,10 +95,15 @@ void CommandInfo::processPositional(const std::vector<_tstring>& infiles, const 
 }
 
 int CommandInfo::main(int argc, _TCHAR* argv[]) {
-    (void) argc;
-    (void) argv;
+    initializeOptions();
+    processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone, 2);
+    processPositional(genericOptions.infiles, genericOptions.outfile);
 
     // std::cout << "processName: " << processName << std::endl;
+    // std::cout << "genericOptions.test: " << genericOptions.test << std::endl;
+    // for (int i = 0; i < genericOptions.infiles.size(); ++i)
+    //     std::cout << "genericOptions.infiles[" << i << "]: " << genericOptions.infiles[i] << std::endl;
+    // std::cout << "genericOptions.outfile: " << genericOptions.outfile << std::endl;
     // std::cout << "options.format: " << static_cast<int>(options.format) << std::endl;
     // std::cout << "options.inputFilepath: " << options.inputFilepath << std::endl;
 
@@ -114,11 +118,15 @@ int CommandInfo::printInfo(const _tstring& infile) {
         inf = stdin;
 #if defined(_WIN32)
         // Set "stdin" to have binary mode
-        (void)_setmode( _fileno( stdin ), _O_BINARY );
+        (void) _setmode(_fileno(stdin), _O_BINARY);
 #endif
     } else {
-        // TODO: Is _tfopen depricated? fclose?
+        // TODO: fclose?
+#ifdef _WIN32
+        _tfopen_s(&inf, infile.c_str(), "rb");
+#else
         inf = _tfopen(infile.c_str(), "rb");
+#endif
     }
 
     if (inf) {

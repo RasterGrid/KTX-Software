@@ -4,9 +4,10 @@
 
 
 add_executable(ktxtools
-        ktx_main.cpp
+        command.cpp
         command_info.cpp
         command_validate.cpp
+        ktx_main.cpp
 )
 
 create_version_header(tools/ktx ktxtools)
