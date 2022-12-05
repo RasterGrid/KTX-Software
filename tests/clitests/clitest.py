@@ -15,18 +15,25 @@ import filecmp
 class SubcaseContext:
     def __init__(self, args):
         self.args = args
-        if len(args) > 0:
-            self.rep = dict((re.escape('${' + key + '}'), value) for key, value in args.items())
-            self.pattern = re.compile('|'.join(self.rep.keys()))
-        else:
-            self.rep = None
-            self.pattern = None
+        self.pattern = re.compile("\$\{(\{[a-zA-Z0-9_-]+\})\}")
 
     def eval(self, value):
-        if self.pattern is not None:
-            return self.pattern.sub(lambda m: self.rep[re.escape(m.group(0))], value)
-        else:
-            return value
+        return self.pattern.sub(lambda m: m.group(1), value.replace('{', '{{').replace('}', '}}')).format(**self.args)
+
+    def match(self, expected, actual):
+        expected = self.eval(expected)
+        inside_regex = False
+        pos = expected.find('`')
+        expected_regex = re.escape(expected[0:pos])
+        while pos >= 0:
+            inside_regex = not inside_regex
+            start = pos + 1
+            pos = expected.find('`', start)
+            if inside_regex:
+                expected_regex += expected[start:pos]
+            else:
+                expected_regex += re.escape(expected[start:pos])
+        return re.match(expected_regex, actual)
 
     def cmdArgs(self):
         arg_list = []
@@ -174,7 +181,7 @@ if __name__ == '__main__':
                 output_ref = output_ref_file.read()
                 output_ref_file.close()
 
-            if output_ref != output[stdfile]:
+            if not ctx.match(output_ref, output[stdfile]):
                 output_filename = f"{cli_args.json_test_file}.{subcase_index + 1}.{stdfile[3:]}"
                 output_file = open(output_filename, 'w+')
                 output_file.write(output[stdfile])
