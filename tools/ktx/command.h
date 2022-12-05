@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include "argparser.h"
 #include <memory>
+#include <vector>
 
 
 #if defined(_WIN32)
@@ -27,7 +29,16 @@ namespace ktx {
 
 class Command {
 public:
+    _tstring processName;
+    const bool hasOutputFile;
+
+public:
+    virtual void initializeOptions(std::vector<argparser::option>& long_opts, _tstring& short_opts) = 0;
+    virtual bool processOption(argparser& parser, int opt) = 0;
+    virtual void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) = 0;
     virtual int main(int argc, _TCHAR* argv[]) = 0;
+
+    explicit inline Command(bool hasOutputFile) noexcept : hasOutputFile(hasOutputFile) {}
     virtual ~Command() = default;
 };
 

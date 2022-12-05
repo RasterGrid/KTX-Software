@@ -7,13 +7,12 @@
 #include "utility.h"
 #include "version.h"
 
-// #include <algorithm>
-// #include <functional>
 #include <iostream>
 #include <map>
+#include <string>
 #include <string_view>
 
-#include "command.hpp"
+#include "command.h"
 
 
 // -------------------------------------------------------------------------------------------------
@@ -97,6 +96,7 @@ namespace ktx {
 
 class ktxTools : public ktxApp {
 private:
+    commandOptions options;
     std::unique_ptr<Command> command;
 
 public:
@@ -106,9 +106,7 @@ public:
 public:
     virtual int main(int argc, _TCHAR* argv[]) override;
     virtual bool processOption(argparser& parser, int opt) override {
-        (void) parser;
-        (void) opt;
-        return true;
+        return command->processOption(parser, opt);
     }
 };
 
@@ -131,8 +129,6 @@ ktxTools::ktxTools() : ktxApp(myversion, mydefversion, options) {
 }
 
 int ktxTools::main(int argc, _TCHAR* argv[]) {
-    std::cout << "Hello, KTX Tools" << std::endl;
-
     if (argc < 2) {
         // TODO: Print usage, Failure: missing sub command
         std::cerr << "Print usage, Failure: missing sub command" << std::endl;
@@ -147,6 +143,10 @@ int ktxTools::main(int argc, _TCHAR* argv[]) {
         return EXIT_FAILURE;
     }
 
+    command->initializeOptions(option_list, short_opts);
+    processCommandLine(argc, argv, eDisallowStdin, command->hasOutputFile ? eLast : eNone, 2);
+    command->processName = name;
+    command->processPositional(options.infiles, options.outfile);
     return command->main(argc, argv);
 }
 

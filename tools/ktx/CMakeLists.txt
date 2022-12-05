@@ -28,6 +28,7 @@ PRIVATE
 
 target_link_libraries(
     ktxtools
+    ktx
     objUtil
 )
 
