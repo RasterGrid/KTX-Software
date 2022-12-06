@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
         try:
             cmd_args = ctx.eval(testcase['command']).split(' ')
-            cmd_args[0] = f"{cli_args.executable_path}/{cmd_args[0]}"
+            cmd_args[0] = cli_args.executable_path
 
             proc = subprocess.Popen(
                 cmd_args,
@@ -185,7 +185,7 @@ if __name__ == '__main__':
                 output_ref_filename = ctx.eval(testcase[stdfile])
 
                 if not cmd_failed and cli_args.regen_golden:
-                    output_ref_file = open(output_ref_filename, 'w+')
+                    output_ref_file = open(output_ref_filename, 'w+', encoding='utf-8')
                     output_ref_file.write(output[stdfile])
                     output_ref_file.close()
                     
@@ -194,13 +194,13 @@ if __name__ == '__main__':
                     subcase_failed = True
                     continue
 
-                output_ref_file = open(output_ref_filename, 'r')
+                output_ref_file = open(output_ref_filename, 'r', encoding='utf-8')
                 output_ref = output_ref_file.read()
                 output_ref_file.close()
 
             if not ctx.match(output_ref, output[stdfile]):
                 output_filename = f"{cli_args.json_test_file}.{subcase_index + 1}.{stdfile[3:]}"
-                output_file = open(output_filename, 'w+')
+                output_file = open(output_filename, 'w+', encoding='utf-8')
                 output_file.write(output[stdfile])
                 output_file.close()
                 if output_ref_filename:

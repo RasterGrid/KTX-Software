@@ -12,8 +12,6 @@ set(CASELIST
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
 
-get_target_property(KTXTOOLS_PATH ktxtools BINARY_DIR)
-
 foreach(CASE_FILE ${CASELIST})
     get_filename_component(CASE_DIR ${CASE_FILE} DIRECTORY)
     get_filename_component(CASE_NAME ${CASE_FILE} NAME_WE)
@@ -22,10 +20,10 @@ foreach(CASE_FILE ${CASELIST})
     set(FULL_CASE_NAME "${CASE_GROUP}${CASE_NAME}")
 
     list(APPEND CASE_REGEN_GOLDEN_COMMANDS
-        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path ${KTXTOOLS_PATH} --regen-golden)
+        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path $<TARGET_FILE:ktxtools> --regen-golden)
 
     add_test(NAME ${FULL_CASE_NAME}
-        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path ${KTXTOOLS_PATH}
+        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path $<TARGET_FILE:ktxtools>
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
