@@ -159,8 +159,8 @@ if __name__ == '__main__':
                 subcase_failed = True
 
             output = {
-                'stdout': stdout.decode('utf-8'),
-                'stderr': stderr.decode('utf-8')
+                'stdout': stdout.decode('utf-8').replace("\r\n", "\n"),
+                'stderr': stderr.decode('utf-8').replace("\r\n", "\n")
             }
 
         except Exception as excp:
