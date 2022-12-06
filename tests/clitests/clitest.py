@@ -10,6 +10,7 @@ import re
 import json
 import itertools
 import filecmp
+import shutil
 
 
 class SubcaseContext:
@@ -45,13 +46,15 @@ class SubcaseContext:
 if __name__ == '__main__':
     # Parse and check base arguments
 
-    print(os.environ['PATH'])
-
     parser = argparse.ArgumentParser(
         description="KTX CLI Tool Test Runner",
         usage="clitest.py <json-test-file> [<args>]")
 
     parser.add_argument('json_test_file')
+    parser.add_argument('--regen-golden', action='store_true',
+                        help='Regenerate reference files')
+    parser.add_argument('--executable-path', action='store', required=True,
+                        help='Path to use for the executed command')
 
     cli_args, unknown_args = parser.parse_known_args()
 
@@ -67,15 +70,15 @@ if __name__ == '__main__':
     f.close()
 
     if not 'description' in testcase:
-        print(f"ERROR: Missing 'description' from JSON test case")
+        print("ERROR: Missing 'description' from JSON test case")
         exit(1)
 
     if not 'command' in testcase:
-        print(f"ERROR: Missing 'command' from JSON test case")
+        print("ERROR: Missing 'command' from JSON test case")
         exit(1)
 
     if not 'status' in testcase:
-        print(f"ERROR: Missing 'status' from JSON test case")
+        print("ERROR: Missing 'status' from JSON test case")
         exit(1)
 
 
@@ -126,6 +129,7 @@ if __name__ == '__main__':
 
         ctx = SubcaseContext(subcase)
 
+        cmd_failed = False
         subcase_failed = False
         subcase_messages = []
 
@@ -139,8 +143,10 @@ if __name__ == '__main__':
         }
 
         try:
+            cmd_args = ctx.eval(testcase['command']).split(' ')
+            print([ f"{cli_args.executable_path}/{cmd_args[0]}" ] + [ cmd_args[1:] ])
             proc = subprocess.Popen(
-                ctx.eval(testcase['command']).split(' '),
+                [ f"{cli_args.executable_path}/{cmd_args[0]}" ] + cmd_args[1:],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 stdin=subprocess.DEVNULL)
@@ -157,9 +163,14 @@ if __name__ == '__main__':
                 'stderr': stderr.decode('utf-8')
             }
 
-        except:
+        except Exception as excp:
             subcase_messages.append("Failed to execute command:")
             subcase_messages.append(f"  {ctx.eval(testcase['command'])}")
+            output = {
+                'stdout': output['stdout'],
+                'stderr': output['stderr'] + str(excp)
+            }
+            cmd_failed = True
             subcase_failed = True
 
 
@@ -172,6 +183,11 @@ if __name__ == '__main__':
             if stdfile in testcase:
                 output_ref_filename = ctx.eval(testcase[stdfile])
 
+                if not cmd_failed and cli_args.regen_golden:
+                    output_ref_file = open(output_ref_filename, 'w+')
+                    output_ref_file.write(output[stdfile])
+                    output_ref_file.close()
+                    
                 if not os.path.isfile(output_ref_filename):
                     subcase_messages.append(f"Cannot find reference {stdfile} file '{output_ref_filename}'")
                     subcase_failed = True
@@ -200,6 +216,9 @@ if __name__ == '__main__':
             for output, output_ref in testcase['outputs'].items():
                 files_found = True
 
+                if not cmd_failed and cli_args.regen_golden:
+                    shutil.copyfile(output, output_ref)
+
                 output = ctx.eval(output)
                 if not os.path.isfile(output):
                     subcase_messages.append(f"Cannot find output file '{output}'")
@@ -226,6 +245,10 @@ if __name__ == '__main__':
             messages.append(f"        clitest.py {cli_args.json_test_file} {ctx.cmdArgs()}")
             subcases_failed += 1
             failed = True
+
+            if cmd_failed and cli_args.regen_golden:
+                print("STOPPED: Reference data regeneration was requested but command execution failed.")
+                exit(1)
         else:
             subcases_passed += 1
 

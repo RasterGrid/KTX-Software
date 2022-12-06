@@ -1,6 +1,0 @@
-{
-    "description": "Sample test case calling ktxinfo that should pass",
-    "command": "ktxinfo",
-    "status": 2,
-    "stderr": "golden/sample.err"
-}

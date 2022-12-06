@@ -1,5 +1,0 @@
-{
-    "description": "Sample test case calling ktxinfo that should fail",
-    "command": "ktxinfo",
-    "status": 0
-}

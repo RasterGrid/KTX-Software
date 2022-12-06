@@ -7,8 +7,13 @@ find_package(PythonInterp 3 REQUIRED)
 enable_testing()
 
 set(CASELIST
-    input/info/samplePass.json
-    input/validate/sampleFail.json)
+    input/info/sample.json
+    input/validate/sample.json)
+
+set(CASE_REGEN_GOLDEN_COMMANDS)
+
+get_target_property(KTXTOOLS_PATH ktxtools BINARY_DIR)
+message(${KTXTOOLS_PATH})
 
 foreach(CASE_FILE ${CASELIST})
     get_filename_component(CASE_DIR ${CASE_FILE} DIRECTORY)
@@ -17,11 +22,14 @@ foreach(CASE_FILE ${CASELIST})
     string(REPLACE "/" "." CASE_GROUP "${CASE_TRIMMED_DIR}")
     set(FULL_CASE_NAME "${CASE_GROUP}${CASE_NAME}")
 
-    add_test(NAME ${FULL_CASE_NAME}
-        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    list(APPEND CASE_REGEN_GOLDEN_COMMANDS
+        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path ${KTXTOOLS_PATH} --regen-golden)
 
-    # TODO: Replace these with the unified ktx tool binary directory
-    get_target_property(KTXINFO_PATH ktxinfo BINARY_DIR)
-    set_property(TEST ${FULL_CASE_NAME} PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_append:${KTXINFO_PATH}")
+    add_test(NAME ${FULL_CASE_NAME}
+        COMMAND ${PYTHON_EXECUTABLE} clitest.py ${CASE_FILE} --executable-path ${KTXTOOLS_PATH}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
+
+add_custom_target(clitests_regen_golden
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CASE_REGEN_GOLDEN_COMMANDS})
