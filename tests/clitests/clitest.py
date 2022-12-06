@@ -144,9 +144,10 @@ if __name__ == '__main__':
 
         try:
             cmd_args = ctx.eval(testcase['command']).split(' ')
-            print([ f"{cli_args.executable_path}/{cmd_args[0]}" ] + [ cmd_args[1:] ])
+            cmd_args[0] = f"{cli_args.executable_path}/{cmd_args[0]}"
+
             proc = subprocess.Popen(
-                [ f"{cli_args.executable_path}/{cmd_args[0]}" ] + cmd_args[1:],
+                cmd_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 stdin=subprocess.DEVNULL)

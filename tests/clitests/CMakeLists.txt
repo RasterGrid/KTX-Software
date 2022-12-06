@@ -13,7 +13,6 @@ set(CASELIST
 set(CASE_REGEN_GOLDEN_COMMANDS)
 
 get_target_property(KTXTOOLS_PATH ktxtools BINARY_DIR)
-message(${KTXTOOLS_PATH})
 
 foreach(CASE_FILE ${CASELIST})
     get_filename_component(CASE_DIR ${CASE_FILE} DIRECTORY)
