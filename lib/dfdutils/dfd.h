@@ -19,6 +19,7 @@
 #define _DFD_H_
 
 #include <KHR/khr_df.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -126,8 +127,49 @@ enum InterpretDFDResult interpretDFD(const uint32_t *DFD,
                                      InterpretedDFDChannel *A,
                                      uint32_t *wordBytes);
 
+#define KHR_DFD_UNKNOWN_ENUM_VALUE_STRING "unknown"
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringVendorID(khr_df_vendorid_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringDescriptorType(khr_df_khr_descriptortype_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringVersionNumber(khr_df_versionnumber_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringFlagsBit(khr_df_flags_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringTransferFunction(khr_df_transfer_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringColorPrimaries(khr_df_primaries_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringColorModel(khr_df_model_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringSampleDatatypeQualifiers(khr_df_sample_datatype_qualifiers_e value);
+
+/* Returns the string representation or KHR_DFD_UNKNOWN_ENUM_VALUE_STRING if
+ * there is no direct match or the value is invalid */
+const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e value);
+
 /* Print a human-readable interpretation of a data format descriptor. */
 void printDFD(uint32_t *DFD);
+
+/* Print a JSON interpretation of a data format descriptor. */
+void printDFDJSON(uint32_t *DFD, uint32_t base_indent, uint32_t indent_width, bool minified);
 
 /* Get the number of components & component size from a DFD for an
  * unpacked format.
