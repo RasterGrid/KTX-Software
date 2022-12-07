@@ -647,25 +647,64 @@ void printDFD(uint32_t *DFD)
     int samples = (KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE) - 4 * KHR_DF_WORD_SAMPLESTART) / (4 * KHR_DF_WORD_SAMPLEWORDS);
     int sample;
     int model = KHR_DFDVAL(BDB, MODEL);
+
+#define PRINT_ENUM(VALUE, TO_STRING_FN) {                        \
+        int value = VALUE;                                       \
+        const char* str = TO_STRING_FN(value);                   \
+        if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0) \
+            printf("%d", value);                                 \
+        else                                                     \
+            printf("%s", str);                                   \
+    }
+
     printf("DFD total bytes: %d\n", DFD[0]);
-    printf("BDB descriptor type 0x%04x vendor id = 0x%05x\n",
-           KHR_DFDVAL(BDB, DESCRIPTORTYPE),
-           KHR_DFDVAL(BDB, VENDORID));
-    printf("Descriptor block size %d (%d samples) versionNumber = 0x%04x\n",
+
+    printf("BDB descriptor type: ");
+    PRINT_ENUM(KHR_DFDVAL(BDB, DESCRIPTORTYPE), dfdToStringDescriptorType);
+    printf("\nVendor ID: ");
+    PRINT_ENUM(KHR_DFDVAL(BDB, VENDORID), dfdToStringVendorID);
+    printf("\n");
+
+    printf("Descriptor block size: %d (%d samples)\nVersionNumber: ",
            KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE),
-           samples,
-           KHR_DFDVAL(BDB, VERSIONNUMBER));
-    printf("Flags 0x%02x Xfer %02d Primaries %02d Model %03d\n",
-           KHR_DFDVAL(BDB, FLAGS),
-           KHR_DFDVAL(BDB, TRANSFER),
-           KHR_DFDVAL(BDB, PRIMARIES),
-           model);
-    printf("Dimensions: %d,%d,%d,%d\n",
+           samples);
+    PRINT_ENUM(KHR_DFDVAL(BDB, VERSIONNUMBER), dfdToStringVersionNumber);
+    printf("\n");
+
+    khr_df_flags_e flags = KHR_DFDVAL(BDB, FLAGS);
+    printf("Flags: 0x%x (", flags);
+    if (flags == 0) {
+        // Special case for KHR_DF_FLAG_ALPHA_STRAIGHT, with value 0 it's not a real flag, but we still print it
+        PRINT_ENUM(0, dfdToStringFlagsBit);
+
+    } else {
+        for (uint32_t j = 0; j < 32; ++j) {
+            uint32_t bit = 1u << j;
+            if ((bit & (uint32_t) flags) == 0)
+                continue;
+
+            const char* comma = (uint32_t) flags >= (bit << 1u) ? ", " : "";
+            const char* str = dfdToStringFlagsBit(bit);
+            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
+                printf("%d%s", bit, comma);
+            else
+                printf("%s%s", str, comma);
+        }
+    }
+    printf(")\nTransfer: ");
+    PRINT_ENUM(KHR_DFDVAL(BDB, TRANSFER), dfdToStringTransferFunction);
+    printf("\nPrimaries: ");
+    PRINT_ENUM(KHR_DFDVAL(BDB, PRIMARIES), dfdToStringColorPrimaries);
+    printf("\nModel: ");
+    PRINT_ENUM(model, dfdToStringColorModel);
+    printf("\n");
+
+    printf("Dimensions: %d, %d, %d, %d\n",
            KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION0) + 1,
            KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION1) + 1,
            KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION2) + 1,
            KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION3) + 1);
-    printf("Plane bytes: %d,%d,%d,%d,%d,%d,%d,%d\n",
+    printf("Plane bytes: %d, %d, %d, %d, %d, %d, %d, %d\n",
            KHR_DFDVAL(BDB, BYTESPLANE0),
            KHR_DFDVAL(BDB, BYTESPLANE1),
            KHR_DFDVAL(BDB, BYTESPLANE2),
@@ -675,41 +714,46 @@ void printDFD(uint32_t *DFD)
            KHR_DFDVAL(BDB, BYTESPLANE6),
            KHR_DFDVAL(BDB, BYTESPLANE7));
     for (sample = 0; sample < samples; ++sample) {
-        int channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
-        printf("    Sample %d\n", sample);
-        printf("Qualifiers %x", KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4);
-        printf(" Channel 0x%x", channelId);
-        if (model == KHR_DF_MODEL_UASTC) {
-            printf(" (%s)",
-                   channelId == KHR_DF_CHANNEL_UASTC_RRRG ? "RRRG"
-                 : channelId == KHR_DF_CHANNEL_UASTC_RGBA ? "RGBA"
-                 : channelId == KHR_DF_CHANNEL_UASTC_RRR ? "RRR"
-                 : channelId == KHR_DF_CHANNEL_UASTC_RGB ? "RGB"
-                 : channelId == KHR_DF_CHANNEL_UASTC_RG ? "RG"
-                 : "unknown");
-        } else if (model == KHR_DF_MODEL_ETC1S) {
-            printf(" (%s)",
-                   channelId == KHR_DF_CHANNEL_ETC1S_AAA ? "AAA"
-                 : channelId == KHR_DF_CHANNEL_ETC1S_GGG ? "GGG"
-                 : channelId == KHR_DF_CHANNEL_ETC1S_RRR ? "RRR"
-                 : channelId == KHR_DF_CHANNEL_ETC1S_RGB ? "RGB"
-                 : "unknown");
-        } else {
-            printf(" (%c)",
-               "RGB3456789abcdeA"[channelId]);
+        khr_df_model_channels_e channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
+        printf("Sample %d:\n", sample);
+
+        khr_df_sample_datatype_qualifiers_e qualifiers = KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4;
+        printf("    Qualifiers: 0x%x (", qualifiers);
+        for (uint32_t j = 0; j < 32; ++j) {
+            uint32_t bit = 1u << j;
+            if ((bit & (uint32_t) qualifiers) == 0)
+                continue;
+
+            const char* comma = (uint32_t) qualifiers >= (bit << 1u) ? ", " : "";
+            const char* str = dfdToStringSampleDatatypeQualifiers(bit);
+            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
+                printf("%d%s", bit, comma);
+            else
+                printf("%s%s", str, comma);
         }
-        printf(" Length %d bits Offset %d\n",
+        printf(")\n");
+        printf("    Channel: 0x%x", channelId);
+        {
+            const char* str = dfdToStringChannelId(model, channelId);
+            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
+                printf(" (%d)\n", channelId);
+            else
+                printf(" (%s)\n", str);
+        }
+        printf("    Length: %d bits Offset: %d\n",
                KHR_DFDSVAL(BDB, sample, BITLENGTH) + 1,
                KHR_DFDSVAL(BDB, sample, BITOFFSET));
-        printf("Position: %d,%d,%d,%d\n",
+        printf("    Position: %d, %d, %d, %d\n",
                KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION0),
                KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION1),
                KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION2),
                KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION3));
-        printf("Lower 0x%08x\nUpper 0x%08x\n",
+        printf("    Lower: 0x%08x\n    Upper: 0x%08x\n",
                KHR_DFDSVAL(BDB, sample, SAMPLELOWER),
                KHR_DFDSVAL(BDB, sample, SAMPLEUPPER));
     }
+
+#undef PRINT_ENUM
 }
 
 static void printIndent(uint32_t indent, uint32_t width) {
