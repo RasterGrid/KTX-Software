@@ -8,10 +8,9 @@
 #include "utility.h"
 
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <string_view>
-
 
 // -------------------------------------------------------------------------------------------------
 
@@ -115,21 +114,13 @@ int Tools::main(int argc, _TCHAR* argv[]) {
 
 } // namespace ktx ---------------------------------------------------------------------------------
 
-[[nodiscard]] std::unique_ptr<ktx::Command> createCommand(std::string_view name) {
-    using createFn = std::unique_ptr<ktx::Command>(*)();
-    std::map<std::string, createFn, std::less<>> commands;
+KTX_COMMAND_BUILTIN(ktxInfo)
+KTX_COMMAND_BUILTIN(ktxValidate)
 
-    commands.emplace("info", ktx::createCommandInfo);
-    commands.emplace("validate", ktx::createCommandValidate);
-    // commands.emplace("transcode", ktx::createCommandTranscode);
-    // commands.emplace("encode", ktx::createCommandEncode);
-    // commands.emplace("extract", ktx::createCommandExtract);
-    // commands.emplace("create", ktx::createCommandCreate);
-    // commands.emplace("help", ktx::createCommandHelp);
-
-    const auto it = commands.find(name);
-    return it == commands.end() ? std::make_unique<ktx::Tools>() : (it->second)();
-}
+std::unordered_map<std::string, ktx::pfnBuiltinCommand> builtinCommands = {
+    { "info",       ktxInfo },
+    { "validate",   ktxValidate }
+};
 
 int _tmain(int argc, _TCHAR* argv[]) {
     if (argc < 2) {
@@ -138,7 +129,18 @@ int _tmain(int argc, _TCHAR* argv[]) {
         return EXIT_FAILURE;
     }
 
-    const auto commandName = ktx::trim(argv[1]);
-    auto command = createCommand(commandName);
-    return command->main(argc, argv);
+    const auto it = builtinCommands.find(argv[1]);
+    if (it != builtinCommands.end()) {
+        // Call built-in subcommand, trimming the first parameter.
+        return it->second(argc - 1, argv + 1);
+    } else {
+        // In the future it is possible to add further logic here to allow loading command plugins
+        // from shared libraries or call external commands. There is no defined configuration
+        // mechanism to do so, but the command framework has been designed to be able to build
+        // subcommands as separate executables or shared libraries.
+    }
+
+    // If no sub-command was found we simply call the main command's entry point.
+    ktx::Tools cmd{};
+    return cmd.main(argc, argv);
 }

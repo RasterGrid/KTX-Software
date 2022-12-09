@@ -13,21 +13,50 @@
 
 
 #if defined(_WIN32)
-  #include <tchar.h>
+    #include <tchar.h>
+    #define KTX_COMMAND_EXPORT extern "C" __declspec(dllexport)
+    #define KTX_COMMAND_CALL __stdcall
+    #define KTX_COMMAND_PTR KTX_COMMAND_CALL
 #else
-  #define _TCHAR char
-  #define _T(x) x
+    #define _TCHAR char
+    #define _T(x) x
+    #define KTX_COMMAND_EXPORT extern "C" __attribute__((visibility="default"))
+    #define KTX_COMMAND_CALL
+    #define KTX_COMMAND_PTR
 #endif
 #if defined(_UNICODE)
-  #define _tstring std::wstring
+    #define _tstring std::wstring
 #else
-  #define _tstring std::string
+    #define _tstring std::string
 #endif
 
+#define KTX_COMMAND_ENTRY_POINT_DEF(CMDCLASS) \
+    (int argc, _TCHAR* argv[]) { CMDCLASS cmd{}; return cmd.main(argc, argv); }
+
+#if defined(KTX_COMMAND_EXECUTABLE)
+    // Command is built as a separate executable
+    // (parent command can issue it using a system call)
+    #define KTX_COMMAND_ENTRY_POINT(NAME, CMDCLASS) \
+        int _tmain KTX_COMMAND_ENTRY_POINT_DEF(CMDCLASS)
+#elif defined(KTX_COMMAND_SHARED_LIB)
+    // Command is built as a separate shared library
+    // (parent command can issue it by loading its entry point)
+    #define KTX_COMMAND_ENTRY_POINT(NAME, CMDCLASS) \
+        KTX_COMMAND_EXPORT int KTX_COMMAND_CALL ktxCommandMain KTX_COMMAND_ENTRY_POINT_DEF(CMDCLASS)
+#else
+    // Command is built statically into the executable
+    #define KTX_COMMAND_ENTRY_POINT(NAME, CMDCLASS) \
+        int NAME KTX_COMMAND_ENTRY_POINT_DEF(CMDCLASS)
+#endif
+
+#define KTX_COMMAND_BUILTIN(NAME) int NAME(int argc, _TCHAR* argv[]);
 
 // -------------------------------------------------------------------------------------------------
 
 namespace ktx {
+
+typedef int (*pfnBuiltinCommand)(int argc, _TCHAR* argv[]);
+typedef int (KTX_COMMAND_PTR *pfnImportedCommand)(int argc, _TCHAR* argv[]);
 
 class Command {
 protected:
@@ -77,8 +106,7 @@ protected:
 
     void processCommandLine(int argc, _TCHAR* argv[],
             StdinUse stdinStat = StdinUse::eAllowStdin,
-            OutfilePos outfilePos = OutfilePos::eNone,
-            int startIndex = 1);
+            OutfilePos outfilePos = OutfilePos::eNone);
     bool loadFileList(const _tstring& f, bool relativize, std::vector<_tstring>& filenames);
 
     virtual void processOptions(argparser& parser);
@@ -88,13 +116,5 @@ protected:
     void writeId(std::ostream& dst, bool chktest);
     void printVersion();
 };
-
-[[nodiscard]] std::unique_ptr<Command> createCommandInfo();
-[[nodiscard]] std::unique_ptr<Command> createCommandValidate();
-// [[nodiscard]] std::unique_ptr<Command> createCommandTranscode();
-// [[nodiscard]] std::unique_ptr<Command> createCommandEncode();
-// [[nodiscard]] std::unique_ptr<Command> createCommandExtract();
-// [[nodiscard]] std::unique_ptr<Command> createCommandCreate();
-// [[nodiscard]] std::unique_ptr<Command> createCommandHelp();
 
 } // namespace ktx

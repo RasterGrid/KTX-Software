@@ -49,10 +49,6 @@ private:
     int printInfo(const _tstring& infile);
 };
 
-std::unique_ptr<Command> createCommandInfo() {
-    return std::make_unique<CommandInfo>();
-}
-
 // -------------------------------------------------------------------------------------------------
 
 void CommandInfo::initializeOptions() {
@@ -96,7 +92,7 @@ void CommandInfo::processPositional(const std::vector<_tstring>& infiles, const 
 
 int CommandInfo::main(int argc, _TCHAR* argv[]) {
     initializeOptions();
-    processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone, 2);
+    processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone);
     processPositional(genericOptions.infiles, genericOptions.outfile);
 
     // std::cout << "processName: " << processName << std::endl;
@@ -154,3 +150,5 @@ int CommandInfo::printInfo(const _tstring& infile) {
 }
 
 } // namespace ktx
+
+KTX_COMMAND_ENTRY_POINT(ktxInfo, ktx::CommandInfo)
