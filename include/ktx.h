@@ -1672,6 +1672,8 @@ ktxHashListEntry_GetValue(ktxHashListEntry* This,
 KTX_API KTX_error_code KTX_APIENTRY ktxPrintInfoForStdioStream(FILE* stdioStream);
 KTX_API KTX_error_code KTX_APIENTRY ktxPrintInfoForNamedFile(const char* const filename);
 KTX_API KTX_error_code KTX_APIENTRY ktxPrintInfoForMemory(const ktx_uint8_t* bytes, ktx_size_t size);
+KTX_API KTX_error_code KTX_APIENTRY ktxPrintInfoJSONForStdioStream(FILE* stdioStream, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified);
+KTX_API KTX_error_code KTX_APIENTRY ktxPrintInfoJSONForMemory(const ktx_uint8_t* bytes, ktx_size_t size, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified);
 
 #ifdef __cplusplus
 }

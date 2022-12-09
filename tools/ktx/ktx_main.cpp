@@ -83,7 +83,8 @@ namespace ktx {
 //          --convert-oetf: <oetf>
 //          --convert-primaries: <primaries
 //
-// ktx help <sub_command>
+// ktx help <command>
+//
 
 class Tools : public Command {
 private:

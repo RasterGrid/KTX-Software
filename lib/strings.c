@@ -16,6 +16,7 @@
  */
 
 #include "ktx.h"
+#include "basis_sgd.h"
 
 static const char* const errorStrings[] = {
     "Operation succeeded.",                           /* KTX_SUCCESS */
@@ -124,5 +125,23 @@ ktxSupercompressionSchemeString(ktxSupercmpScheme scheme)
             return "Invalid scheme value";
         else
             return "Vendor scheme";
+    }
+}
+
+/**
+* @~English
+* @brief Return a string corresponding to a bu_image_flags bit.
+*
+* @param bit       the bu_image_flag bit for which to return a string.
+*
+* @return pointer to the message string or the string "unknown" otherwise.
+*
+* @internal Use UTF-8 for translated message strings.
+*/
+const char* ktxBUImageFlagsBitString(buFlags bit)
+{
+    switch (bit) {
+        case eBUImageIsPframe: return "eBUImageIsPframe";
+        default: return "unknown";
     }
 }

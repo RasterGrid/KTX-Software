@@ -807,30 +807,29 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
         printf(FMT, __VA_ARGS__);                                \
     }
 
-    PRINT_INDENT(0, "{%s", nl)
-    PRINT_INDENT(1, "\"totalSize\":%s%d,%s", space, dfdTotalSize, nl)
-    PRINT_INDENT(1, "\"blocks\":%s[%s", space, nl)
+    PRINT_INDENT(0, "\"totalSize\":%s%d,%s", space, dfdTotalSize, nl)
+    PRINT_INDENT(0, "\"blocks\":%s[%s", space, nl)
 
     while (dfdTotalSizeRemaining > 0) {
         int blockSize = KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE);
         int samples = (blockSize - 4 * KHR_DF_WORD_SAMPLESTART) / (4 * KHR_DF_WORD_SAMPLEWORDS);
         int model = KHR_DFDVAL(BDB, MODEL);
 
-        PRINT_INDENT(2, "{%s", nl)
-        PRINT_ENUM_C(3, "descriptorType", KHR_DFDVAL(BDB, DESCRIPTORTYPE), dfdToStringDescriptorType);
-        PRINT_ENUM_C(3, "vendorId", KHR_DFDVAL(BDB, VENDORID), dfdToStringVendorID);
-        PRINT_INDENT(3, "\"descriptorBlockSize\":%s%d,%s", space, blockSize, nl)
-        PRINT_ENUM_C(3, "versionNumber", KHR_DFDVAL(BDB, VERSIONNUMBER), dfdToStringVersionNumber);
+        PRINT_INDENT(1, "{%s", nl)
+        PRINT_ENUM_C(2, "descriptorType", KHR_DFDVAL(BDB, DESCRIPTORTYPE), dfdToStringDescriptorType);
+        PRINT_ENUM_C(2, "vendorId", KHR_DFDVAL(BDB, VENDORID), dfdToStringVendorID);
+        PRINT_INDENT(2, "\"descriptorBlockSize\":%s%d,%s", space, blockSize, nl)
+        PRINT_ENUM_C(2, "versionNumber", KHR_DFDVAL(BDB, VERSIONNUMBER), dfdToStringVersionNumber);
 
-        PRINT_INDENT(4, "\"flags\":%s[%s", space, nl)
+        PRINT_INDENT(2, "\"flags\":%s[%s", space, nl)
         khr_df_flags_e flags = KHR_DFDVAL(BDB, FLAGS);
         if (flags == 0) {
             // Special case for KHR_DF_FLAG_ALPHA_STRAIGHT, with value 0 it's not a real flag, but we still print it
             const char* str = dfdToStringFlagsBit(0);
             if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                PRINT_INDENT(4, "%d%s", 0, nl)
+                PRINT_INDENT(3, "%d%s", 0, nl)
             else
-                PRINT_INDENT(4, "\"%s\"%s", str, nl)
+                PRINT_INDENT(3, "\"%s\"%s", str, nl)
 
         } else {
             for (uint32_t j = 0; j < 32; ++j) {
@@ -841,22 +840,22 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
                 const char* comma = (uint32_t) flags >= (bit << 1u) ? "," : "";
                 const char* str = dfdToStringFlagsBit(bit);
                 if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                    PRINT_INDENT(4, "%d%s%s", bit, comma, nl)
+                    PRINT_INDENT(3, "%d%s%s", bit, comma, nl)
                 else
-                    PRINT_INDENT(4, "\"%s\"%s%s", str, comma, nl)
+                    PRINT_INDENT(3, "\"%s\"%s%s", str, comma, nl)
             }
         }
-        PRINT_INDENT(3, "],%s", nl)
+        PRINT_INDENT(2, "],%s", nl)
 
-        PRINT_ENUM_C(3, "transferFunction", KHR_DFDVAL(BDB, TRANSFER), dfdToStringTransferFunction);
-        PRINT_ENUM_C(3, "colorPrimaries", KHR_DFDVAL(BDB, PRIMARIES), dfdToStringColorPrimaries);
-        PRINT_ENUM_C(3, "colorModel", model, dfdToStringColorModel);
-        PRINT_INDENT(3, "\"texelBlockDimension\":%s[%d,%s%d,%s%d,%s%d],%s", space,
+        PRINT_ENUM_C(2, "transferFunction", KHR_DFDVAL(BDB, TRANSFER), dfdToStringTransferFunction);
+        PRINT_ENUM_C(2, "colorPrimaries", KHR_DFDVAL(BDB, PRIMARIES), dfdToStringColorPrimaries);
+        PRINT_ENUM_C(2, "colorModel", model, dfdToStringColorModel);
+        PRINT_INDENT(2, "\"texelBlockDimension\":%s[%d,%s%d,%s%d,%s%d],%s", space,
                 KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION0) + 1, space,
                 KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION1) + 1, space,
                 KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION2) + 1, space,
                 KHR_DFDVAL(BDB, TEXELBLOCKDIMENSION3) + 1, nl)
-        PRINT_INDENT(3, "\"bytesPlane\":%s[%d,%s%d,%s%d,%s%d,%s%d,%s%d,%s%d,%s%d],%s", space,
+        PRINT_INDENT(2, "\"bytesPlane\":%s[%d,%s%d,%s%d,%s%d,%s%d,%s%d,%s%d,%s%d],%s", space,
                 KHR_DFDVAL(BDB, BYTESPLANE0), space,
                 KHR_DFDVAL(BDB, BYTESPLANE1), space,
                 KHR_DFDVAL(BDB, BYTESPLANE2), space,
@@ -866,16 +865,16 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
                 KHR_DFDVAL(BDB, BYTESPLANE6), space,
                 KHR_DFDVAL(BDB, BYTESPLANE7), nl)
 
-        PRINT_INDENT(3, "\"samples\":%s[%s", space, nl)
+        PRINT_INDENT(2, "\"samples\":%s[%s", space, nl)
         for (int sample = 0; sample < samples; ++sample) {
-            PRINT_INDENT(4, "{%s", nl)
+            PRINT_INDENT(3, "{%s", nl)
 
             khr_df_sample_datatype_qualifiers_e qualifiers = KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4;
             if (qualifiers == 0) {
-                PRINT_INDENT(5, "\"qualifiers\":%s[],%s", space, nl)
+                PRINT_INDENT(4, "\"qualifiers\":%s[],%s", space, nl)
 
             } else {
-                PRINT_INDENT(5, "\"qualifiers\":%s[%s", space, nl)
+                PRINT_INDENT(4, "\"qualifiers\":%s[%s", space, nl)
 
                 for (uint32_t j = 0; j < 32; ++j) {
                     uint32_t bit = 1u << j;
@@ -885,53 +884,51 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
                     const char* comma = (uint32_t) qualifiers >= (bit << 1u) ? "," : "";
                     const char* str = dfdToStringSampleDatatypeQualifiers(bit);
                     if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                        PRINT_INDENT(6, "%d%s%s", bit, comma, nl)
+                        PRINT_INDENT(5, "%d%s%s", bit, comma, nl)
                     else
-                        PRINT_INDENT(6, "\"%s\"%s%s", str, comma, nl)
+                        PRINT_INDENT(5, "\"%s\"%s%s", str, comma, nl)
                 }
 
-                PRINT_INDENT(5, "],%s", nl)
+                PRINT_INDENT(4, "],%s", nl)
             }
 
             khr_df_model_channels_e channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
             const char* channelStr = dfdToStringChannelId(model, channelId);
             if (strcmp(channelStr, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                PRINT_INDENT(5, "\"channelType\":%s%d,%s", space, channelId, nl)
+                PRINT_INDENT(4, "\"channelType\":%s%d,%s", space, channelId, nl)
             else
-                PRINT_INDENT(5, "\"channelType\":%s\"%s\",%s", space, channelStr, nl)
+                PRINT_INDENT(4, "\"channelType\":%s\"%s\",%s", space, channelStr, nl)
 
-            PRINT_INDENT(5, "\"bitLength\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITLENGTH), nl)
-            PRINT_INDENT(5, "\"bitOffset\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITOFFSET), nl)
-            PRINT_INDENT(5, "\"samplePosition\":%s[%d,%s%d,%s%d,%s%d],%s", space,
+            PRINT_INDENT(4, "\"bitLength\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITLENGTH), nl)
+            PRINT_INDENT(4, "\"bitOffset\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITOFFSET), nl)
+            PRINT_INDENT(4, "\"samplePosition\":%s[%d,%s%d,%s%d,%s%d],%s", space,
                     KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION0), space,
                     KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION1), space,
                     KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION2), space,
                     KHR_DFDSVAL(BDB, sample, SAMPLEPOSITION3), nl)
 
             if (qualifiers & KHR_DF_SAMPLE_DATATYPE_SIGNED) {
-                PRINT_INDENT(5, "\"sampleLower\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, SAMPLELOWER), nl)
-                PRINT_INDENT(5, "\"sampleUpper\":%s%d%s", space, KHR_DFDSVAL(BDB, sample, SAMPLEUPPER), nl)
+                PRINT_INDENT(4, "\"sampleLower\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, SAMPLELOWER), nl)
+                PRINT_INDENT(4, "\"sampleUpper\":%s%d%s", space, KHR_DFDSVAL(BDB, sample, SAMPLEUPPER), nl)
             } else {
-                PRINT_INDENT(5, "\"sampleLower\":%s%u,%s", space, (unsigned int) KHR_DFDSVAL(BDB, sample, SAMPLELOWER), nl)
-                PRINT_INDENT(5, "\"sampleUpper\":%s%u%s", space, (unsigned int) KHR_DFDSVAL(BDB, sample, SAMPLEUPPER), nl)
+                PRINT_INDENT(4, "\"sampleLower\":%s%u,%s", space, (unsigned int) KHR_DFDSVAL(BDB, sample, SAMPLELOWER), nl)
+                PRINT_INDENT(4, "\"sampleUpper\":%s%u%s", space, (unsigned int) KHR_DFDSVAL(BDB, sample, SAMPLEUPPER), nl)
             }
 
             if (sample + 1 != samples)
-                PRINT_INDENT(4, "},%s", nl)
+                PRINT_INDENT(3, "},%s", nl)
             else
-                PRINT_INDENT(4, "}%s", nl)
+                PRINT_INDENT(3, "}%s", nl)
         }
-        PRINT_INDENT(3, "]%s", nl) // End of samples
+        PRINT_INDENT(2, "]%s", nl) // End of samples
 
-        PRINT_INDENT(2, "}%s", nl) // End of block
+        PRINT_INDENT(1, "}%s", nl) // End of block
 
         assert((uint32_t) blockSize <= dfdTotalSizeRemaining);
         dfdTotalSizeRemaining -= blockSize;
         BDB += blockSize / 4;
     }
-    PRINT_INDENT(1, "]%s", nl) // End of blocks
-
-    PRINT_INDENT(0, "}") // End of 'dataFormatDescriptor' object
+    PRINT_INDENT(0, "]%s", nl) // End of blocks
 
 #undef PRINT_ENUM
 #undef PRINT_ENUM_C

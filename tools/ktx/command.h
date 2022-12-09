@@ -109,9 +109,8 @@ protected:
             OutfilePos outfilePos = OutfilePos::eNone);
     bool loadFileList(const _tstring& f, bool relativize, std::vector<_tstring>& filenames);
 
-    virtual void processOptions(argparser& parser);
+    void processOptions(argparser& parser);
     virtual bool processOption(argparser& parser, int opt) = 0;
-    virtual void validateOptions() {}
 
     void writeId(std::ostream& dst, bool chktest);
     void printVersion();

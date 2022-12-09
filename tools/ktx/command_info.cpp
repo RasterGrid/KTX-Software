@@ -16,7 +16,7 @@
 
 namespace ktx {
 
-// TODO: Proper doxygen documentation
+// TODO KTX Tools P2: Proper doxygen documentation
 // ktx info <options> <input_file>
 //          --format: text | json | mini-json
 //              Output format. Defaults to text.
@@ -35,8 +35,8 @@ class CommandInfo : public Command {
     Options options;
 
 public:
-    // TODO: Support --version
-    // TODO: Support --help with proper usage
+    // TODO KTX Tools P5: Support --version
+    // TODO KTX Tools P5: Support --help with proper usage
     void initializeOptions();
     virtual bool processOption(argparser& parser, int opt) override;
     void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile);
@@ -46,7 +46,8 @@ public:
     virtual ~CommandInfo() {};
 
 private:
-    int printInfo(const _tstring& infile);
+    int printInfoText(const _tstring& infile);
+    int printInfoJSON(const _tstring& infile, bool minified);
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -66,7 +67,7 @@ bool CommandInfo::processOption(argparser& parser, int opt) {
         } else if (parser.optarg == "mini-json") {
             options.format = Options::OutputFormat::json_mini;
         } else {
-            // TODO: Print usage, Failure: unsupported format
+            // TODO KTX Tools P5: Print usage, Failure: unsupported format
             std::cerr << "Print usage, Failure: unsupported format" << std::endl;
             return false;
         }
@@ -80,9 +81,14 @@ bool CommandInfo::processOption(argparser& parser, int opt) {
 
 void CommandInfo::processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) {
     if (infiles.empty()) {
-        // TODO: Print usage, Failure: infile is missing
+        // TODO KTX Tools P5: Print usage, Failure: infile is missing
         std::cerr << "Print usage, Failure: infile is missing" << std::endl;
         // return EXIT_FAILURE;
+        return;
+    }
+    if (infiles.size() > 1) {
+        // TODO KTX Tools P5: Print usage, Failure: infiles.size() > 1
+        std::cerr << "Print usage, Failure: infiles.size() > 1" << std::endl;
         return;
     }
 
@@ -92,21 +98,25 @@ void CommandInfo::processPositional(const std::vector<_tstring>& infiles, const 
 
 int CommandInfo::main(int argc, _TCHAR* argv[]) {
     initializeOptions();
-    processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone);
+    processCommandLine(argc, argv, StdinUse::eDisallowStdin, OutfilePos::eNone);
     processPositional(genericOptions.infiles, genericOptions.outfile);
 
-    // std::cout << "processName: " << processName << std::endl;
-    // std::cout << "genericOptions.test: " << genericOptions.test << std::endl;
-    // for (int i = 0; i < genericOptions.infiles.size(); ++i)
-    //     std::cout << "genericOptions.infiles[" << i << "]: " << genericOptions.infiles[i] << std::endl;
-    // std::cout << "genericOptions.outfile: " << genericOptions.outfile << std::endl;
-    // std::cout << "options.format: " << static_cast<int>(options.format) << std::endl;
-    // std::cout << "options.inputFilepath: " << options.inputFilepath << std::endl;
+    switch (options.format) {
+    case Options::OutputFormat::text:
+        return printInfoText(options.inputFilepath);
 
-    return printInfo(options.inputFilepath);
+    case Options::OutputFormat::json:
+        return printInfoJSON(options.inputFilepath, false);
+
+    case Options::OutputFormat::json_mini:
+        return printInfoJSON(options.inputFilepath, true);
+    }
+
+    assert(false && "Internal error");
+    return EXIT_FAILURE;
 }
 
-int CommandInfo::printInfo(const _tstring& infile) {
+int CommandInfo::printInfoText(const _tstring& infile) {
     const bool isStdin = infile == _T("-");
     FILE* inf;
 
@@ -117,7 +127,7 @@ int CommandInfo::printInfo(const _tstring& infile) {
         (void) _setmode(_fileno(stdin), _O_BINARY);
 #endif
     } else {
-        // TODO: fclose?
+        // TODO KTX Tools P5: fclose?
 #ifdef _WIN32
         _tfopen_s(&inf, infile.c_str(), "rb");
 #else
@@ -141,11 +151,53 @@ int CommandInfo::printInfo(const _tstring& infile) {
         }
     } else {
         std::cerr << processName << ": Could not open input file \""
-                // TODO: Is strerror depricated?
+                // TODO KTX Tools P5: Is strerror depricated?
                 << (isStdin ? "stdin" : infile) << "\". " << strerror(errno) << std::endl;
         return 2;
     }
 
+    return EXIT_SUCCESS;
+}
+
+int CommandInfo::printInfoJSON(const _tstring& infile, bool minified) {
+    const char* space = minified ? "" : " ";
+    const char* nl = minified ? "" : "\n";
+
+    FILE* inf;
+
+    // TODO KTX Tools P5: fclose?
+#ifdef _WIN32
+    _tfopen_s(&inf, infile.c_str(), "rb");
+#else
+    inf = _tfopen(infile.c_str(), "rb");
+#endif
+
+    if (!inf) {
+        // TODO KTX Tools P5: Is strerror depricated?
+        std::cerr << processName << ": Could not open input file \"" << infile << "\". " << strerror(errno) << std::endl;
+        return 2;
+    }
+
+    KTX_error_code result;
+
+    std::cout << "{" << nl;
+    std::cout << "    \"$id\":" << space << "\"ktx-schema-url-1.0\"," << nl;
+
+    // TODO KTX Tools P4: Call validate JSON print and include "valid" and "messages" in the JSON output
+    // result = validateAndPrintJSON(inf, 1, 4, minified);
+    // std::cout << "," << nl;
+    result = ktxPrintInfoJSONForStdioStream(inf, 1, 4, minified);
+
+    if (result ==  KTX_FILE_UNEXPECTED_EOF) {
+        std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
+        return 2;
+    }
+    if (result == KTX_UNKNOWN_FILE_FORMAT) {
+        std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
+        return 2;
+    }
+
+    std::cout << "}" << nl;
     return EXIT_SUCCESS;
 }
 
