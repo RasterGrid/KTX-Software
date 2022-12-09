@@ -163,8 +163,7 @@ class ktxApp {
     enum OutfilePos { eNone, eFirst, eLast };
     void processCommandLine(int argc, _TCHAR* argv[],
                             StdinUse stdinStat = eAllowStdin,
-                            OutfilePos outfilePos = eNone,
-                            int startIndex = 1)
+                            OutfilePos outfilePos = eNone)
     {
         uint32_t i;
         size_t slash, dot;
@@ -180,7 +179,7 @@ class ktxApp {
             if (dot != _tstring::npos)
                 name.erase(dot, _tstring::npos); // Remove extension.
 
-        argparser parser(argc, argv, startIndex);
+        argparser parser(argc, argv);
         processOptions(parser);
 
         i = parser.optind;

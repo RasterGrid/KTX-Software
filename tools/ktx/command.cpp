@@ -35,7 +35,7 @@ void Command::error(const char* pFmt, ...) {
     std::cerr << "\n";
 }
 
-void Command::processCommandLine(int argc, _TCHAR* argv[], StdinUse stdinStat, OutfilePos outfilePos, int startIndex) {
+void Command::processCommandLine(int argc, _TCHAR* argv[], StdinUse stdinStat, OutfilePos outfilePos) {
     uint32_t i;
     size_t slash, dot;
 
@@ -50,7 +50,7 @@ void Command::processCommandLine(int argc, _TCHAR* argv[], StdinUse stdinStat, O
     if (dot != _tstring::npos)
         processName.erase(dot, _tstring::npos); // Remove extension.
 
-    argparser parser(argc, argv, startIndex);
+    argparser parser(argc, argv);
     processOptions(parser);
 
     i = parser.optind;

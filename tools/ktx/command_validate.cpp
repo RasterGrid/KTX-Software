@@ -39,7 +39,7 @@ public:
         std::cout << "Hello, Validate" << std::endl;
 
         initializeOptions();
-        processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone, 2);
+        processCommandLine(argc, argv, StdinUse::eAllowStdin, OutfilePos::eNone);
         processPositional(genericOptions.infiles, genericOptions.outfile);
 
         return EXIT_SUCCESS;
@@ -54,3 +54,5 @@ std::unique_ptr<Command> createCommandValidate() {
 }
 
 } // namespace ktx
+
+KTX_COMMAND_ENTRY_POINT(ktxValidate, ktx::CommandValidate)
