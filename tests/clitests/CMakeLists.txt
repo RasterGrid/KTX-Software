@@ -7,7 +7,8 @@ find_package(PythonInterp 3 REQUIRED)
 enable_testing()
 
 set(CASELIST
-    input/info/sample.json
+    input/info/sample_text.json
+    input/info/sample_json.json
     input/validate/sample.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
