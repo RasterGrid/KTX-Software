@@ -49,9 +49,7 @@
         printf("%*s" FMT, LENGTH_OF_INDENT(INDENT), "", __VA_ARGS__); \
     }
 
-/**
- * @internal
- */
+/** @internal */
 static void printFlagBitsJSON(uint32_t indent, const char* nl, uint32_t flags, const char*(*toStringFn)(uint32_t, bool)) {
     for (uint32_t bit_index = 0; bit_index < 32; ++bit_index) {
         uint32_t bit_mask = 1u << bit_index;
@@ -64,6 +62,32 @@ static void printFlagBitsJSON(uint32_t indent, const char* nl, uint32_t flags, c
         else if (bit_value)
             printf("%*s%d%s%s", indent, "", bit_mask, comma, nl);
     }
+}
+
+/** @internal */
+bool isKnownKeyValueUINT32(const char* key) {
+    if (strcmp(key, "KTXdxgiFormat__") == 0)
+        return true;
+    if (strcmp(key, "KTXmetalPixelFormat") == 0)
+        return true;
+
+    return false;
+}
+
+/** @internal */
+bool isKnownKeyValueString(const char* key) {
+    if (strcmp(key, "KTXorientation") == 0)
+        return true;
+    if (strcmp(key, "KTXswizzle") == 0)
+        return true;
+    if (strcmp(key, "KTXastcDecodeMode") == 0)
+        return true;
+    if (strcmp(key, "KTXwriter") == 0)
+        return true;
+    if (strcmp(key, "KTXwriterScParams") == 0)
+        return true;
+
+    return false;
 }
 
 /**
@@ -82,65 +106,79 @@ printKVData(ktx_uint8_t* pKvd, ktx_uint32_t kvdLen)
 
     assert(pKvd != NULL && kvdLen > 0);
 
-    result = ktxHashList_Deserialize(&kvDataHead,
-                                     kvdLen, pKvd);
-    if (result == KTX_SUCCESS) {
-        if (kvDataHead == NULL) {
-            fprintf(stdout, "None\n");
-        } else {
-            ktxHashListEntry* entry;
-            for (entry = kvDataHead; entry != NULL; entry = ktxHashList_Next(entry)) {
-                char* key;
-                char* value; // XXX May be a binary value. How to tell?
-                ktx_uint32_t keyLen, valueLen;
+    result = ktxHashList_Deserialize(&kvDataHead, kvdLen, pKvd);
+    if (result != KTX_SUCCESS) {
+        fprintf(stdout, "Not enough memory to build list of key/value pairs.\n");
+        return;
+    }
 
-                ktxHashListEntry_GetKey(entry, &keyLen, &key);
-                ktxHashListEntry_GetValue(entry, &valueLen, (void**)&value);
-                // Keys must be NUL terminated.
-                fprintf(stdout, "%s: ", key);
-                // XXX How to tell if a value is binary and how to output it?
-                // valueLen includes the terminating NUL, if any.
-                if (value) {
-                    if (value[valueLen-1] == '\0') {
-                        fprintf(stdout, "%s", value);
-                    } else {
-                        for (ktx_uint32_t i=0; i < valueLen; i++) {
-                            fputc(value[i], stdout);
-                        }
-                    }
-                }
-                fputc('\n', stdout);
+    if (kvDataHead == NULL)
+        return;
+
+    ktxHashListEntry* entry;
+    for (entry = kvDataHead; entry != NULL; entry = ktxHashList_Next(entry)) {
+        const char* key;
+        char* value;
+        ktx_uint32_t keyLen, valueLen;
+
+        ktxHashListEntry_GetKey(entry, &keyLen, &key);
+        ktxHashListEntry_GetValue(entry, &valueLen, (void**)&value);
+        // Keys must be NUL terminated.
+        fprintf(stdout, "%s:", key);
+        if (!value) {
+            fprintf(stdout, " null\n");
+
+        } else {
+            if (strcmp(key, "KTXglFormat") == 0) {
+                assert(valueLen == 3 * sizeof(ktx_uint32_t));
+                ktx_uint32_t glInternalformat = *(const ktx_uint32_t*) (value + 0);
+                ktx_uint32_t glFormat = *(const ktx_uint32_t*) (value + 4);
+                ktx_uint32_t glType = *(const ktx_uint32_t*) (value + 8);
+                fprintf(stdout, "\n");
+                fprintf(stdout, "    glInternalformat: %d\n", glInternalformat);
+                fprintf(stdout, "    glFormat: %d\n", glFormat);
+                fprintf(stdout, "    glType: %d\n", glType);
+
+            } else if (strcmp(key, "KTXanimData") == 0) {
+                assert(valueLen == 3 * sizeof(ktx_uint32_t));
+                ktx_uint32_t duration = *(const ktx_uint32_t*) (value + 0);
+                ktx_uint32_t timescale = *(const ktx_uint32_t*) (value + 4);
+                ktx_uint32_t loopCount = *(const ktx_uint32_t*) (value + 8);
+                fprintf(stdout, "\n");
+                fprintf(stdout, "    duration: %d\n", duration);
+                fprintf(stdout, "    timescale: %d\n", timescale);
+                fprintf(stdout, "    loopCount: %d\n", loopCount);
+
+            } else if (strcmp(key, "KTXcubemapIncomplete") == 0) {
+                assert(valueLen == sizeof(ktx_uint8_t));
+                ktx_uint8_t faces = *value;
+                fprintf(stdout, "\n");
+                fprintf(stdout, "    positiveX: %s\n", faces & 1u << 0u ? "true" : "false");
+                fprintf(stdout, "    negativeX: %s\n", faces & 1u << 1u ? "true" : "false");
+                fprintf(stdout, "    positiveY: %s\n", faces & 1u << 2u ? "true" : "false");
+                fprintf(stdout, "    negativeY: %s\n", faces & 1u << 3u ? "true" : "false");
+                fprintf(stdout, "    positiveZ: %s\n", faces & 1u << 4u ? "true" : "false");
+                fprintf(stdout, "    negativeZ: %s\n", faces & 1u << 5u ? "true" : "false");
+
+            } else if (isKnownKeyValueUINT32(key)) {
+                assert(valueLen == sizeof(ktx_uint32_t));
+                ktx_uint32_t number = *(const ktx_uint32_t*) value;
+                fprintf(stdout, " %d\n", number);
+
+            } else if (isKnownKeyValueString(key)) {
+                assert(value[valueLen-1] == '\0');
+                fprintf(stdout, " %s\n", value);
+
+            } else {
+                fprintf(stdout, " [");
+                for (ktx_uint32_t i = 0; i < valueLen; i++)
+                    fprintf(stdout, "%d%s", (int) value[i], i + 1 == valueLen ? "" : ", ");
+                fprintf(stdout, "]\n");
             }
         }
-        ktxHashList_Destruct(&kvDataHead);
-    } else {
-        fprintf(stdout,
-                "Not enough memory to build list of key/value pairs.\n");
     }
-}
 
-bool isKnownKeyValueUINT32(const char* key) {
-    if (strcmp(key, "KTXdxgiFormat__") == 0)
-        return true;
-    if (strcmp(key, "KTXmetalPixelFormat") == 0)
-        return true;
-
-    return false;
-}
-
-bool isKnownKeyValueString(const char* key) {
-    if (strcmp(key, "KTXorientation") == 0)
-        return true;
-    if (strcmp(key, "KTXswizzle") == 0)
-        return true;
-    if (strcmp(key, "KTXastcDecodeMode") == 0)
-        return true;
-    if (strcmp(key, "KTXwriter") == 0)
-        return true;
-    if (strcmp(key, "KTXwriterScParams") == 0)
-        return true;
-
-    return false;
+    ktxHashList_Destruct(&kvDataHead);
 }
 
 /**
