@@ -595,6 +595,10 @@ printKTX2Info2(ktxStream* stream, KTX_header2* pHeader)
 void
 printKTX2Info2JSON(ktxStream* stream, KTX_header2* pHeader, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
 {
+    if (minified) {
+        base_indent = 0;
+        indent_width = 0;
+    }
     const char* space = minified ? "" : " ";
     const char* nl = minified ? "" : "\n";
 

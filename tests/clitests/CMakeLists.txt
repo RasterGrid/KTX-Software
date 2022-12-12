@@ -9,6 +9,7 @@ enable_testing()
 set(CASELIST
     input/info/sample_text.json
     input/info/sample_json.json
+    input/info/sample_mini.json
     input/validate/sample.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
