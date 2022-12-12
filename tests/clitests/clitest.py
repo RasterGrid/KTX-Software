@@ -185,10 +185,10 @@ if __name__ == '__main__':
                 output_ref_filename = ctx.eval(testcase[stdfile])
 
                 if not cmd_failed and cli_args.regen_golden:
-                    output_ref_file = open(output_ref_filename, 'w+', encoding='utf-8')
+                    output_ref_file = open(output_ref_filename, 'w+', newline='\n', encoding='utf-8')
                     output_ref_file.write(output[stdfile])
                     output_ref_file.close()
-                    
+
                 if not os.path.isfile(output_ref_filename):
                     subcase_messages.append(f"Cannot find reference {stdfile} file '{output_ref_filename}'")
                     subcase_failed = True
@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
             if not ctx.match(output_ref, output[stdfile]):
                 output_filename = f"{cli_args.json_test_file}.{subcase_index + 1}.{stdfile[3:]}"
-                output_file = open(output_filename, 'w+', encoding='utf-8')
+                output_file = open(output_filename, 'w+', newline='\n', encoding='utf-8')
                 output_file.write(output[stdfile])
                 output_file.close()
                 if output_ref_filename:
