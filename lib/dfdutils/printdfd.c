@@ -15,6 +15,7 @@
  * Author: Andrew Garrard
  */
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -779,10 +780,9 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
     const char* space = minified ? "" : " ";
     const char* nl = minified ? "" : "\n";
 
+    uint32_t dfdTotalSize = DFD[0];
+    uint32_t dfdTotalSizeRemaining = dfdTotalSize - 4;
     uint32_t* BDB = DFD + 1;
-    int samples = (KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE) - 4 * KHR_DF_WORD_SAMPLESTART) / (4 * KHR_DF_WORD_SAMPLEWORDS);
-    int sample;
-    int model = KHR_DFDVAL(BDB, MODEL);
 
 #define PRINT_ENUM(INDENT, NAME, VALUE, TO_STRING_FN, COMMA) {   \
         int value = VALUE;                                       \
@@ -808,18 +808,21 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
     }
 
     PRINT_INDENT(0, "{%s", nl)
-    PRINT_INDENT(1, "\"totalSize\":%s%d,%s", space, DFD[0], nl)
+    PRINT_INDENT(1, "\"totalSize\":%s%d,%s", space, dfdTotalSize, nl)
     PRINT_INDENT(1, "\"blocks\":%s[%s", space, nl)
 
-    // TODO: Number of blocks?
-    for (int i = 0; i < 1; ++i) {
+    while (dfdTotalSizeRemaining > 0) {
+        int blockSize = KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE);
+        int samples = (blockSize - 4 * KHR_DF_WORD_SAMPLESTART) / (4 * KHR_DF_WORD_SAMPLEWORDS);
+        int model = KHR_DFDVAL(BDB, MODEL);
+
         PRINT_INDENT(2, "{%s", nl)
         PRINT_ENUM_C(3, "descriptorType", KHR_DFDVAL(BDB, DESCRIPTORTYPE), dfdToStringDescriptorType);
         PRINT_ENUM_C(3, "vendorId", KHR_DFDVAL(BDB, VENDORID), dfdToStringVendorID);
-        PRINT_INDENT(3, "\"descriptorBlockSize\":%s%d,%s", space, KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE), nl)
+        PRINT_INDENT(3, "\"descriptorBlockSize\":%s%d,%s", space, blockSize, nl)
         PRINT_ENUM_C(3, "versionNumber", KHR_DFDVAL(BDB, VERSIONNUMBER), dfdToStringVersionNumber);
 
-        PRINT_INDENT(3, "\"flags\":%s[%s", space, nl)
+        PRINT_INDENT(4, "\"flags\":%s[%s", space, nl)
         khr_df_flags_e flags = KHR_DFDVAL(BDB, FLAGS);
         if (flags == 0) {
             // Special case for KHR_DF_FLAG_ALPHA_STRAIGHT, with value 0 it's not a real flag, but we still print it
@@ -864,12 +867,10 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
                 KHR_DFDVAL(BDB, BYTESPLANE7), nl)
 
         PRINT_INDENT(3, "\"samples\":%s[%s", space, nl)
-        for (sample = 0; sample < samples; ++sample) {
+        for (int sample = 0; sample < samples; ++sample) {
             PRINT_INDENT(4, "{%s", nl)
 
             khr_df_sample_datatype_qualifiers_e qualifiers = KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4;
-            // qualifiers = 42532 | KHR_DF_SAMPLE_DATATYPE_LINEAR | KHR_DF_SAMPLE_DATATYPE_SIGNED;
-            // qualifiers = KHR_DF_SAMPLE_DATATYPE_SIGNED;
             if (qualifiers == 0) {
                 PRINT_INDENT(5, "\"qualifiers\":%s[],%s", space, nl)
 
@@ -923,6 +924,10 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
         PRINT_INDENT(3, "]%s", nl) // End of samples
 
         PRINT_INDENT(2, "}%s", nl) // End of block
+
+        assert((uint32_t) blockSize <= dfdTotalSizeRemaining);
+        dfdTotalSizeRemaining -= blockSize;
+        BDB += blockSize / 4;
     }
     PRINT_INDENT(1, "]%s", nl) // End of blocks
 
