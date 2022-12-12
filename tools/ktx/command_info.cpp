@@ -117,42 +117,30 @@ int CommandInfo::main(int argc, _TCHAR* argv[]) {
 }
 
 int CommandInfo::printInfoText(const _tstring& infile) {
-    const bool isStdin = infile == _T("-");
     FILE* inf;
 
-    if (isStdin) {
-        inf = stdin;
-#if defined(_WIN32)
-        // Set "stdin" to have binary mode
-        (void) _setmode(_fileno(stdin), _O_BINARY);
-#endif
-    } else {
-        // TODO KTX Tools P5: fclose?
+    // TODO KTX Tools P5: fclose?
 #ifdef _WIN32
-        _tfopen_s(&inf, infile.c_str(), "rb");
+    _tfopen_s(&inf, infile.c_str(), "rb");
 #else
-        inf = _tfopen(infile.c_str(), "rb");
+    inf = _tfopen(infile.c_str(), "rb");
 #endif
-    }
 
     if (inf) {
         KTX_error_code result;
 
-        result = ktxPrintInfoForStdioStream(inf);
+        result = ktxPrintKTX2InfoTextForStdioStream(inf);
         if (result ==  KTX_FILE_UNEXPECTED_EOF) {
-            std::cerr << processName << ": Unexpected end of file reading \""
-                    << (isStdin ? "stdin" : infile) << "\"." << std::endl;
+            std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
             return 2;
         }
         if (result == KTX_UNKNOWN_FILE_FORMAT) {
-            std::cerr << processName << ": " << (isStdin ? "stdin" : infile)
-                    << " is not a KTX or KTX2 file." << std::endl;
+            std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
             return 2;
         }
     } else {
-        std::cerr << processName << ": Could not open input file \""
-                // TODO KTX Tools P5: Is strerror depricated?
-                << (isStdin ? "stdin" : infile) << "\". " << strerror(errno) << std::endl;
+        // TODO KTX Tools P5: Is strerror depricated?
+        std::cerr << processName << ": Could not open input file \"" << infile << "\". " << strerror(errno) << std::endl;
         return 2;
     }
 
@@ -181,12 +169,13 @@ int CommandInfo::printInfoJSON(const _tstring& infile, bool minified) {
     KTX_error_code result;
 
     std::cout << "{" << nl;
-    std::cout << "    \"$id\":" << space << "\"ktx-schema-url-1.0\"," << nl;
+    // TODO KTX Tools P5: ktx-schema-url-1.0 will has to be replaced with the actual URL
+    std::cout << (minified ? "" : "    ") << "\"$id\":" << space << "\"ktx-schema-url-1.0\"," << nl;
 
     // TODO KTX Tools P4: Call validate JSON print and include "valid" and "messages" in the JSON output
     // result = validateAndPrintJSON(inf, 1, 4, minified);
     // std::cout << "," << nl;
-    result = ktxPrintInfoJSONForStdioStream(inf, 1, 4, minified);
+    result = ktxPrintKTX2InfoJSONForStdioStream(inf, 1, 4, minified);
 
     if (result ==  KTX_FILE_UNEXPECTED_EOF) {
         std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;

@@ -32,7 +32,7 @@ const char* dfdToStringVendorID(khr_df_vendorid_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
 const char* dfdToStringDescriptorType(khr_df_khr_descriptortype_e value) {
@@ -50,7 +50,7 @@ const char* dfdToStringDescriptorType(khr_df_khr_descriptortype_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
 const char* dfdToStringVersionNumber(khr_df_versionnumber_e value) {
@@ -68,17 +68,16 @@ const char* dfdToStringVersionNumber(khr_df_versionnumber_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
-const char* dfdToStringFlagsBit(khr_df_flags_e value) {
-    switch (value) {
-    case KHR_DF_FLAG_ALPHA_STRAIGHT:
-        return "KHR_DF_FLAG_ALPHA_STRAIGHT";
-    case KHR_DF_FLAG_ALPHA_PREMULTIPLIED:
-        return "KHR_DF_FLAG_ALPHA_PREMULTIPLIED";
+const char* dfdToStringFlagsBit(uint32_t bit_index, bool bit_value) {
+    switch (bit_index) {
+    case 0:
+        return bit_value ? "KHR_DF_FLAG_ALPHA_PREMULTIPLIED" : "KHR_DF_FLAG_ALPHA_STRAIGHT";
+    default:
+        return NULL;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
 }
 
 const char* dfdToStringTransferFunction(khr_df_transfer_e value) {
@@ -127,7 +126,7 @@ const char* dfdToStringTransferFunction(khr_df_transfer_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
 const char* dfdToStringColorPrimaries(khr_df_primaries_e value) {
@@ -162,7 +161,7 @@ const char* dfdToStringColorPrimaries(khr_df_primaries_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
 const char* dfdToStringColorModel(khr_df_model_e value) {
@@ -237,11 +236,14 @@ const char* dfdToStringColorModel(khr_df_model_e value) {
         // These enum values are not meant for string representation. Ignore
         break;
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
-const char* dfdToStringSampleDatatypeQualifiers(khr_df_sample_datatype_qualifiers_e value) {
-    switch (value) {
+const char* dfdToStringSampleDatatypeQualifiers(uint32_t bit_index, bool bit_value) {
+    if (!bit_value)
+        return NULL;
+
+    switch (1u << bit_index) {
     case KHR_DF_SAMPLE_DATATYPE_LINEAR:
         return "KHR_DF_SAMPLE_DATATYPE_LINEAR";
     case KHR_DF_SAMPLE_DATATYPE_EXPONENT:
@@ -251,7 +253,7 @@ const char* dfdToStringSampleDatatypeQualifiers(khr_df_sample_datatype_qualifier
     case KHR_DF_SAMPLE_DATATYPE_FLOAT:
         return "KHR_DF_SAMPLE_DATATYPE_FLOAT";
     }
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
 }
 
 const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e value) {
@@ -271,7 +273,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_RGBSDA_ALPHA:
             return "KHR_DF_CHANNEL_RGBSDA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_YUVSDA:
@@ -289,7 +291,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_YUVSDA_ALPHA:
             return "KHR_DF_CHANNEL_YUVSDA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_YIQSDA:
@@ -307,7 +309,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_YIQSDA_ALPHA:
             return "KHR_DF_CHANNEL_YIQSDA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_LABSDA:
@@ -325,7 +327,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_LABSDA_ALPHA:
             return "KHR_DF_CHANNEL_LABSDA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_CMYKA:
@@ -341,7 +343,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_CMYKSDA_ALPHA:
             return "KHR_DF_CHANNEL_CMYKSDA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_XYZW:
@@ -355,7 +357,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_XYZW_W:
             return "KHR_DF_CHANNEL_XYZW_W";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_HSVA_ANG:
@@ -369,7 +371,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_HSVA_ANG_ALPHA:
             return "KHR_DF_CHANNEL_HSVA_ANG_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_HSLA_ANG:
@@ -383,7 +385,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_HSLA_ANG_ALPHA:
             return "KHR_DF_CHANNEL_HSLA_ANG_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_HSVA_HEX:
@@ -397,7 +399,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_HSVA_HEX_ALPHA:
             return "KHR_DF_CHANNEL_HSVA_HEX_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_HSLA_HEX:
@@ -411,7 +413,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_HSLA_HEX_ALPHA:
             return "KHR_DF_CHANNEL_HSLA_HEX_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_YCGCOA:
@@ -425,7 +427,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_YCGCOA_ALPHA:
             return "KHR_DF_CHANNEL_YCGCOA_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_CIEXYZ:
@@ -437,7 +439,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_CIEXYZ_Z:
             return "KHR_DF_CHANNEL_CIEXYZ_Z";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_CIEXYY:
@@ -449,7 +451,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_CIEXYY_YLUMA:
             return "KHR_DF_CHANNEL_CIEXYY_YLUMA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC1A:
@@ -459,7 +461,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC1A_ALPHA:
             return "KHR_DF_CHANNEL_BC1A_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC2:
@@ -469,7 +471,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC2_ALPHA:
             return "KHR_DF_CHANNEL_BC2_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC3:
@@ -479,7 +481,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC3_ALPHA:
             return "KHR_DF_CHANNEL_BC3_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC4:
@@ -487,7 +489,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC4_DATA:
             return "KHR_DF_CHANNEL_BC4_DATA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC5:
@@ -497,7 +499,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC5_GREEN:
             return "KHR_DF_CHANNEL_BC5_GREEN";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC6H:
@@ -505,7 +507,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC6H_COLOR:
             return "KHR_DF_CHANNEL_BC6H_COLOR";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_BC7:
@@ -513,7 +515,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_BC7_COLOR:
             return "KHR_DF_CHANNEL_BC7_COLOR";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_ETC1:
@@ -521,7 +523,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_ETC1_COLOR:
             return "KHR_DF_CHANNEL_ETC1_COLOR";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_ETC2:
@@ -535,7 +537,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_ETC2_ALPHA:
             return "KHR_DF_CHANNEL_ETC2_ALPHA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_ASTC:
@@ -543,7 +545,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_ASTC_DATA:
             return "KHR_DF_CHANNEL_ASTC_DATA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_ETC1S:
@@ -557,7 +559,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_ETC1S_AAA:
             return "KHR_DF_CHANNEL_ETC1S_AAA";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_PVRTC:
@@ -565,7 +567,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_PVRTC_COLOR:
             return "KHR_DF_CHANNEL_PVRTC_COLOR";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_PVRTC2:
@@ -573,7 +575,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_PVRTC2_COLOR:
             return "KHR_DF_CHANNEL_PVRTC2_COLOR";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     case KHR_DF_MODEL_UASTC:
@@ -589,7 +591,7 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
         case KHR_DF_CHANNEL_UASTC_RG:
             return "KHR_DF_CHANNEL_UASTC_RG";
         default:
-            return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+            return NULL;
         }
 
     default:
@@ -597,43 +599,77 @@ const char* dfdToStringChannelId(khr_df_model_e model, khr_df_model_channels_e v
     }
 
     switch (value) {
-    case 0:
-        return "R";
-    case 1:
-        return "G";
-    case 2:
-        return "B";
-    case 3:
-        return "3";
-    case 4:
-        return "4";
-    case 5:
-        return "5";
-    case 6:
-        return "6";
-    case 7:
-        return "7";
-    case 8:
-        return "8";
-    case 9:
-        return "9";
-    case 10:
-        return "a";
-    case 11:
-        return "b";
-    case 12:
-        return "c";
-    case 13:
-        return "d";
-    case 14:
-        return "e";
-    case 15:
-        return "A";
+    case KHR_DF_CHANNEL_UNSPECIFIED_0:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_0";
+    case KHR_DF_CHANNEL_UNSPECIFIED_1:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_1";
+    case KHR_DF_CHANNEL_UNSPECIFIED_2:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_2";
+    case KHR_DF_CHANNEL_UNSPECIFIED_3:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_3";
+    case KHR_DF_CHANNEL_UNSPECIFIED_4:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_4";
+    case KHR_DF_CHANNEL_UNSPECIFIED_5:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_5";
+    case KHR_DF_CHANNEL_UNSPECIFIED_6:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_6";
+    case KHR_DF_CHANNEL_UNSPECIFIED_7:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_7";
+    case KHR_DF_CHANNEL_UNSPECIFIED_8:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_8";
+    case KHR_DF_CHANNEL_UNSPECIFIED_9:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_9";
+    case KHR_DF_CHANNEL_UNSPECIFIED_10:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_10";
+    case KHR_DF_CHANNEL_UNSPECIFIED_11:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_11";
+    case KHR_DF_CHANNEL_UNSPECIFIED_12:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_12";
+    case KHR_DF_CHANNEL_UNSPECIFIED_13:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_13";
+    case KHR_DF_CHANNEL_UNSPECIFIED_14:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_14";
+    case KHR_DF_CHANNEL_UNSPECIFIED_15:
+        return "KHR_DF_CHANNEL_UNSPECIFIED_15";
     default:
         break;
     }
 
-    return KHR_DFD_UNKNOWN_ENUM_VALUE_STRING;
+    return NULL;
+}
+
+/**
+ * @internal
+ */
+static void printFlagBits(uint32_t flags, const char*(*toStringFn)(uint32_t, bool)) {
+    for (uint32_t bit_index = 0; bit_index < 32; ++bit_index) {
+        uint32_t bit_mask = 1u << bit_index;
+        bool bit_value = (bit_mask & (uint32_t) flags) != 0;
+
+        const char* comma = (uint32_t) flags >= (bit_mask << 1u) ? ", " : "";
+        const char* str = toStringFn(bit_index, bit_value);
+        if (str)
+            printf("%s%s", str, comma);
+        else if (bit_value)
+            printf("%d%s", bit_mask, comma);
+    }
+}
+
+/**
+ * @internal
+ */
+static void printFlagBitsJSON(uint32_t indent, const char* nl, uint32_t flags, const char*(*toStringFn)(uint32_t, bool)) {
+    for (uint32_t bit_index = 0; bit_index < 32; ++bit_index) {
+        uint32_t bit_mask = 1u << bit_index;
+        bool bit_value = (bit_mask & (uint32_t) flags) != 0;
+
+        const char* comma = (uint32_t) flags >= (bit_mask << 1u) ? ", " : "";
+        const char* str = toStringFn(bit_index, bit_value);
+        if (str)
+            printf("%*s\"%s\"%s%s", indent, "", str, comma, nl);
+        else if (bit_value)
+            printf("%*s%d%s%s", indent, "", bit_mask, comma, nl);
+    }
 }
 
 /**
@@ -652,10 +688,10 @@ void printDFD(uint32_t *DFD)
 #define PRINT_ENUM(VALUE, TO_STRING_FN) {                        \
         int value = VALUE;                                       \
         const char* str = TO_STRING_FN(value);                   \
-        if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0) \
-            printf("%d", value);                                 \
-        else                                                     \
+        if (str)                                                 \
             printf("%s", str);                                   \
+        else                                                     \
+            printf("%d", value);                                 \
     }
 
     printf("DFD total bytes: %d\n", DFD[0]);
@@ -674,24 +710,7 @@ void printDFD(uint32_t *DFD)
 
     khr_df_flags_e flags = KHR_DFDVAL(BDB, FLAGS);
     printf("Flags: 0x%x (", flags);
-    if (flags == 0) {
-        // Special case for KHR_DF_FLAG_ALPHA_STRAIGHT, with value 0 it's not a real flag, but we still print it
-        PRINT_ENUM(0, dfdToStringFlagsBit);
-
-    } else {
-        for (uint32_t j = 0; j < 32; ++j) {
-            uint32_t bit = 1u << j;
-            if ((bit & (uint32_t) flags) == 0)
-                continue;
-
-            const char* comma = (uint32_t) flags >= (bit << 1u) ? ", " : "";
-            const char* str = dfdToStringFlagsBit(bit);
-            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                printf("%d%s", bit, comma);
-            else
-                printf("%s%s", str, comma);
-        }
-    }
+    printFlagBits(flags, dfdToStringFlagsBit);
     printf(")\nTransfer: ");
     PRINT_ENUM(KHR_DFDVAL(BDB, TRANSFER), dfdToStringTransferFunction);
     printf("\nPrimaries: ");
@@ -720,26 +739,15 @@ void printDFD(uint32_t *DFD)
 
         khr_df_sample_datatype_qualifiers_e qualifiers = KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4;
         printf("    Qualifiers: 0x%x (", qualifiers);
-        for (uint32_t j = 0; j < 32; ++j) {
-            uint32_t bit = 1u << j;
-            if ((bit & (uint32_t) qualifiers) == 0)
-                continue;
-
-            const char* comma = (uint32_t) qualifiers >= (bit << 1u) ? ", " : "";
-            const char* str = dfdToStringSampleDatatypeQualifiers(bit);
-            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                printf("%d%s", bit, comma);
-            else
-                printf("%s%s", str, comma);
-        }
+        printFlagBits(qualifiers, dfdToStringSampleDatatypeQualifiers);
         printf(")\n");
         printf("    Channel: 0x%x", channelId);
         {
             const char* str = dfdToStringChannelId(model, channelId);
-            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                printf(" (%d)\n", channelId);
-            else
+            if (str)
                 printf(" (%s)\n", str);
+            else
+                printf(" (%d)\n", channelId);
         }
         printf("    Length: %d bits Offset: %d\n",
                KHR_DFDSVAL(BDB, sample, BITLENGTH) + 1,
@@ -755,11 +763,6 @@ void printDFD(uint32_t *DFD)
     }
 
 #undef PRINT_ENUM
-}
-
-static void printIndent(uint32_t indent, uint32_t width) {
-    for (uint32_t i = 0; i < indent * width; ++i)
-        putchar(' ');
 }
 
 /**
@@ -784,27 +787,30 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
     uint32_t dfdTotalSizeRemaining = dfdTotalSize - 4;
     uint32_t* BDB = DFD + 1;
 
-#define PRINT_ENUM(INDENT, NAME, VALUE, TO_STRING_FN, COMMA) {   \
-        int value = VALUE;                                       \
-        printIndent(base_indent + INDENT, indent_width);         \
-        printf("\"" NAME "\":%s", space);                        \
-        const char* str = TO_STRING_FN(value);                   \
-        if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0) \
-            printf("%d", value);                                 \
-        else                                                     \
-            printf("\"%s\"", str);                               \
-        printf(COMMA "%s", nl);                                  \
+#define LENGTH_OF_INDENT(INDENT) ((base_indent + INDENT) * indent_width)
+
+/** Prints an enum as string or number */
+#define PRINT_ENUM(INDENT, NAME, VALUE, TO_STRING_FN, COMMA) {             \
+        int value = VALUE;                                                 \
+        printf("%*s\"" NAME "\":%s", LENGTH_OF_INDENT(INDENT), "", space); \
+        const char* str = TO_STRING_FN(value);                             \
+        if (str)                                                           \
+            printf("\"%s\"", str);                                         \
+        else                                                               \
+            printf("%d", value);                                           \
+        printf(COMMA "%s", nl);                                            \
     }
 
-#define PRINT_ENUM_C(INDENT, NAME, VALUE, TO_STRING_FN)          \
+/** Prints an enum as string or number if the to string function fails with a trailing comma*/
+#define PRINT_ENUM_C(INDENT, NAME, VALUE, TO_STRING_FN) \
         PRINT_ENUM(INDENT, NAME, VALUE, TO_STRING_FN, ",")
 
-#define PRINT_ENUM_E(INDENT, NAME, VALUE, TO_STRING_FN) {        \
+/** Prints an enum as string or number if the to string function fails without a trailing comma*/
+#define PRINT_ENUM_E(INDENT, NAME, VALUE, TO_STRING_FN) \
         PRINT_ENUM(INDENT, NAME, VALUE, TO_STRING_FN, "")
 
-#define PRINT_INDENT(INDENT, FMT, ...) {                         \
-        printIndent(base_indent + INDENT, indent_width);         \
-        printf(FMT, __VA_ARGS__);                                \
+#define PRINT_INDENT(INDENT, FMT, ...) {                              \
+        printf("%*s" FMT, LENGTH_OF_INDENT(INDENT), "", __VA_ARGS__); \
     }
 
     PRINT_INDENT(0, "\"totalSize\":%s%d,%s", space, dfdTotalSize, nl)
@@ -823,28 +829,7 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
 
         PRINT_INDENT(2, "\"flags\":%s[%s", space, nl)
         khr_df_flags_e flags = KHR_DFDVAL(BDB, FLAGS);
-        if (flags == 0) {
-            // Special case for KHR_DF_FLAG_ALPHA_STRAIGHT, with value 0 it's not a real flag, but we still print it
-            const char* str = dfdToStringFlagsBit(0);
-            if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                PRINT_INDENT(3, "%d%s", 0, nl)
-            else
-                PRINT_INDENT(3, "\"%s\"%s", str, nl)
-
-        } else {
-            for (uint32_t j = 0; j < 32; ++j) {
-                uint32_t bit = 1u << j;
-                if ((bit & (uint32_t) flags) == 0)
-                    continue;
-
-                const char* comma = (uint32_t) flags >= (bit << 1u) ? "," : "";
-                const char* str = dfdToStringFlagsBit(bit);
-                if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                    PRINT_INDENT(3, "%d%s%s", bit, comma, nl)
-                else
-                    PRINT_INDENT(3, "\"%s\"%s%s", str, comma, nl)
-            }
-        }
+        printFlagBitsJSON(LENGTH_OF_INDENT(3), nl, flags, dfdToStringFlagsBit);
         PRINT_INDENT(2, "],%s", nl)
 
         PRINT_ENUM_C(2, "transferFunction", KHR_DFDVAL(BDB, TRANSFER), dfdToStringTransferFunction);
@@ -875,29 +860,16 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
 
             } else {
                 PRINT_INDENT(4, "\"qualifiers\":%s[%s", space, nl)
-
-                for (uint32_t j = 0; j < 32; ++j) {
-                    uint32_t bit = 1u << j;
-                    if ((bit & (uint32_t) qualifiers) == 0)
-                        continue;
-
-                    const char* comma = (uint32_t) qualifiers >= (bit << 1u) ? "," : "";
-                    const char* str = dfdToStringSampleDatatypeQualifiers(bit);
-                    if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                        PRINT_INDENT(5, "%d%s%s", bit, comma, nl)
-                    else
-                        PRINT_INDENT(5, "\"%s\"%s%s", str, comma, nl)
-                }
-
+                printFlagBitsJSON(LENGTH_OF_INDENT(5), nl, qualifiers, dfdToStringSampleDatatypeQualifiers);
                 PRINT_INDENT(4, "],%s", nl)
             }
 
             khr_df_model_channels_e channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
             const char* channelStr = dfdToStringChannelId(model, channelId);
-            if (strcmp(channelStr, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                PRINT_INDENT(4, "\"channelType\":%s%d,%s", space, channelId, nl)
-            else
+            if (channelStr)
                 PRINT_INDENT(4, "\"channelType\":%s\"%s\",%s", space, channelStr, nl)
+            else
+                PRINT_INDENT(4, "\"channelType\":%s%d,%s", space, channelId, nl)
 
             PRINT_INDENT(4, "\"bitLength\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITLENGTH), nl)
             PRINT_INDENT(4, "\"bitOffset\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITOFFSET), nl)

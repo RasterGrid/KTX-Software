@@ -132,16 +132,20 @@ ktxSupercompressionSchemeString(ktxSupercmpScheme scheme)
 * @~English
 * @brief Return a string corresponding to a bu_image_flags bit.
 *
-* @param bit       the bu_image_flag bit for which to return a string.
+* @param bit_index the bu_image_flag bit to test.
+* @param bit_value the bu_image_flag bit value.
 *
-* @return pointer to the message string or the string "unknown" otherwise.
+* @return pointer to the message string or NULL otherwise.
 *
 * @internal Use UTF-8 for translated message strings.
 */
-const char* ktxBUImageFlagsBitString(buFlags bit)
+const char* ktxBUImageFlagsBitString(buFlags bit_index, bool bit_value)
 {
-    switch (bit) {
+    if (!bit_value)
+        return NULL;
+
+    switch (1u << bit_index) {
         case eBUImageIsPframe: return "eBUImageIsPframe";
-        default: return "unknown";
+        default: return NULL;
     }
 }

@@ -41,18 +41,30 @@
  * Common Utilities for version 1 and 2.                     *
  *===========================================================*/
 
+/** @internal */
+#define LENGTH_OF_INDENT(INDENT) ((base_indent + INDENT) * indent_width)
+
+/** @internal */
+#define PRINT_INDENT(INDENT, FMT, ...) {                                           \
+        printf("%*s" FMT, LENGTH_OF_INDENT(INDENT), "", __VA_ARGS__); \
+    }
+
 /**
  * @internal
  */
-static void printIndent(uint32_t indent, uint32_t width) {
-    for (uint32_t i = 0; i < indent * width; ++i)
-        putchar(' ');
-}
+static void printFlagBitsJSON(uint32_t indent, const char* nl, uint32_t flags, const char*(*toStringFn)(uint32_t, bool)) {
+    for (uint32_t bit_index = 0; bit_index < 32; ++bit_index) {
+        uint32_t bit_mask = 1u << bit_index;
+        bool bit_value = (bit_mask & (uint32_t) flags) != 0;
 
-#define PRINT_INDENT(INDENT, FMT, ...) {                         \
-        printIndent(base_indent + INDENT, indent_width);         \
-        printf(FMT, __VA_ARGS__);                                \
+        const char* comma = (uint32_t) flags >= (bit_mask << 1u) ? ", " : "";
+        const char* str = toStringFn(bit_index, bit_value);
+        if (str)
+            printf("%*s\"%s\"%s%s", indent, "", str, comma, nl);
+        else if (bit_value)
+            printf("%*s%d%s%s", indent, "", bit_mask, comma, nl);
     }
+}
 
 /**
  * @internal
@@ -107,53 +119,43 @@ printKVData(ktx_uint8_t* pKvd, ktx_uint32_t kvdLen)
     }
 }
 
-bool isKnownKeyValueStructure(const char* key) {
-    if (strcmp(key, "KTXglFormat") == 0)
+bool isKnownKeyValueUINT32(const char* key) {
+    if (strcmp(key, "KTXdxgiFormat__") == 0)
         return true;
-    if (strcmp(key, "KTXanimData") == 0)
+    if (strcmp(key, "KTXmetalPixelFormat") == 0)
         return true;
 
     return false;
 }
 
-bool isKnownKeyValueUINT32(const char* scope, const char* key) {
-    if (strcmp(scope, "") == 0) {
-        if (strcmp(key, "KTXdxgiFormat__") == 0)
-            return true;
-        if (strcmp(key, "KTXmetalPixelFormat") == 0)
-            return true;
-
-    } else if (strcmp(scope, "KTXglFormat") == 0) {
-        if (strcmp(key, "glInternalFormat") == 0)
-            return true;
-        if (strcmp(key, "glFormat") == 0)
-            return true;
-        if (strcmp(key, "glType") == 0)
-            return true;
-
-    } else if (strcmp(scope, "KTXanimData") == 0) {
-        if (strcmp(key, "duration") == 0)
-            return true;
-        if (strcmp(key, "timescale") == 0)
-            return true;
-        if (strcmp(key, "loopCount") == 0)
-            return true;
-    }
+bool isKnownKeyValueString(const char* key) {
+    if (strcmp(key, "KTXorientation") == 0)
+        return true;
+    if (strcmp(key, "KTXswizzle") == 0)
+        return true;
+    if (strcmp(key, "KTXastcDecodeMode") == 0)
+        return true;
+    if (strcmp(key, "KTXwriter") == 0)
+        return true;
+    if (strcmp(key, "KTXwriterScParams") == 0)
+        return true;
 
     return false;
 }
 
-// TODO KTX Tools P4: Documentation
 /**
  * @internal
  * @~English
- * @brief Prints a list of the keys & values found in a KTX file.
+ * @brief Prints a list of the keys & values found in a KTX2 file.
  *
  * @param [in]     pKvd         pointer to serialized key/value data.
  * @param [in]     kvdLen       length of the serialized key/value data.
+ * @param [in]     base_indent  The number of indentations to include at the front of every line
+ * @param [in]     indent_width The number of spaces to add with each nested scope
+ * @param [in]     minified     Specifies whether the JSON output should be minified
  */
 void
-printKVDataJSON(const char* scope, ktx_uint8_t* pKvd, ktx_uint32_t kvdLen, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
+printKVDataJSON(ktx_uint8_t* pKvd, ktx_uint32_t kvdLen, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
 {
     const char* space = minified ? "" : " ";
     const char* nl = minified ? "" : "\n";
@@ -192,9 +194,26 @@ printKVDataJSON(const char* scope, ktx_uint8_t* pKvd, ktx_uint32_t kvdLen, ktx_u
             fprintf(stdout, "null");
 
         } else {
-            if (isKnownKeyValueStructure(key)) {
+            if (strcmp(key, "KTXglFormat") == 0) {
+                assert(valueLen == 3 * sizeof(ktx_uint32_t));
+                ktx_uint32_t glInternalformat = *(const ktx_uint32_t*) (value + 0);
+                ktx_uint32_t glFormat = *(const ktx_uint32_t*) (value + 4);
+                ktx_uint32_t glType = *(const ktx_uint32_t*) (value + 8);
                 fprintf(stdout, "{%s", nl);
-                printKVDataJSON(key, (ktx_uint8_t*) value, valueLen, base_indent + 1, indent_width, minified);
+                PRINT_INDENT(1, "\"glInternalformat\":%s%d,%s", space, glInternalformat, nl)
+                PRINT_INDENT(1, "\"glFormat\":%s%d,%s", space, glFormat, nl)
+                PRINT_INDENT(1, "\"glType\":%s%d%s", space, glType, nl)
+                PRINT_INDENT(0, "}")
+
+            } else if (strcmp(key, "KTXanimData") == 0) {
+                assert(valueLen == 3 * sizeof(ktx_uint32_t));
+                ktx_uint32_t duration = *(const ktx_uint32_t*) (value + 0);
+                ktx_uint32_t timescale = *(const ktx_uint32_t*) (value + 4);
+                ktx_uint32_t loopCount = *(const ktx_uint32_t*) (value + 8);
+                fprintf(stdout, "{%s", nl);
+                PRINT_INDENT(1, "\"duration\":%s%d,%s", space, duration, nl)
+                PRINT_INDENT(1, "\"timescale\":%s%d,%s", space, timescale, nl)
+                PRINT_INDENT(1, "\"loopCount\":%s%d%s", space, loopCount, nl)
                 PRINT_INDENT(0, "}")
 
             } else if (strcmp(key, "KTXcubemapIncomplete") == 0) {
@@ -202,21 +221,21 @@ printKVDataJSON(const char* scope, ktx_uint8_t* pKvd, ktx_uint32_t kvdLen, ktx_u
                 ktx_uint8_t faces = *value;
 
                 fprintf(stdout, "{%s", nl);
-                PRINT_INDENT(1, "\"positiveX\":%s%s%s", space, faces & 1u << 0u ? "true" : "false", nl)
-                PRINT_INDENT(1, "\"negativeX\":%s%s%s", space, faces & 1u << 1u ? "true" : "false", nl)
-                PRINT_INDENT(1, "\"positiveY\":%s%s%s", space, faces & 1u << 2u ? "true" : "false", nl)
-                PRINT_INDENT(1, "\"negativeY\":%s%s%s", space, faces & 1u << 3u ? "true" : "false", nl)
-                PRINT_INDENT(1, "\"positiveZ\":%s%s%s", space, faces & 1u << 4u ? "true" : "false", nl)
+                PRINT_INDENT(1, "\"positiveX\":%s%s,%s", space, faces & 1u << 0u ? "true" : "false", nl)
+                PRINT_INDENT(1, "\"negativeX\":%s%s,%s", space, faces & 1u << 1u ? "true" : "false", nl)
+                PRINT_INDENT(1, "\"positiveY\":%s%s,%s", space, faces & 1u << 2u ? "true" : "false", nl)
+                PRINT_INDENT(1, "\"negativeY\":%s%s,%s", space, faces & 1u << 3u ? "true" : "false", nl)
+                PRINT_INDENT(1, "\"positiveZ\":%s%s,%s", space, faces & 1u << 4u ? "true" : "false", nl)
                 PRINT_INDENT(1, "\"negativeZ\":%s%s%s", space, faces & 1u << 5u ? "true" : "false", nl)
                 PRINT_INDENT(0, "}")
 
-            } else if (isKnownKeyValueUINT32(scope, key)) {
+            } else if (isKnownKeyValueUINT32(key)) {
                 assert(valueLen == sizeof(ktx_uint32_t));
                 ktx_uint32_t number = *(const ktx_uint32_t*) value;
                 fprintf(stdout, "%d", number);
 
-            } else if (value[valueLen-1] == '\0') {
-                // Assume value is a string if valueLen includes the terminating NULL
+            } else if (isKnownKeyValueString(key)) {
+                assert(value[valueLen-1] == '\0');
                 fprintf(stdout, "\"%s\"", value);
 
             } else {
@@ -420,7 +439,7 @@ extern const char* vkFormatString(VkFormat format);
 
 extern const char* ktxSupercompressionSchemeString(ktxSupercmpScheme scheme);
 
-const char* ktxBUImageFlagsBitString(buFlags bit);
+const char* ktxBUImageFlagsBitString(buFlags bit_index, bool bit_value);
 
 /**
  * @internal
@@ -581,7 +600,6 @@ printKTX2Info2(ktxStream* stream, KTX_header2* pHeader)
     }
 }
 
-// TODO KTX Tools P4: Documentation
 /**
  * @internal
  * @~English
@@ -589,8 +607,11 @@ printKTX2Info2(ktxStream* stream, KTX_header2* pHeader)
  *
  * The stream's read pointer should be immediately following the header.
  *
- * @param [in]     stream  pointer to the ktxStream reading the file.
- * @param [in]     pHeader pointer to the header to print.
+ * @param [in]     stream       pointer to the ktxStream reading the file.
+ * @param [in]     pHeader      pointer to the header to print.
+ * @param [in]     base_indent  The number of indentations to include at the front of every line
+ * @param [in]     indent_width The number of spaces to add with each nested scope
+ * @param [in]     minified     Specifies whether the JSON output should be minified
  */
 void
 printKTX2Info2JSON(ktxStream* stream, KTX_header2* pHeader, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
@@ -671,7 +692,7 @@ printKTX2Info2JSON(ktxStream* stream, KTX_header2* pHeader, ktx_uint32_t base_in
         PRINT_INDENT(0, "\"keyValueData\":%s{%s", space, nl)
         metadata = malloc(pHeader->keyValueData.byteLength);
         stream->read(stream, metadata, pHeader->keyValueData.byteLength);
-        printKVDataJSON("", metadata, pHeader->keyValueData.byteLength, base_indent + 1, indent_width, minified);
+        printKVDataJSON(metadata, pHeader->keyValueData.byteLength, base_indent + 1, indent_width, minified);
         free(metadata);
         PRINT_INDENT(0, "}%s%s", hasSupercompression ? "," : "", nl)
     }
@@ -720,19 +741,7 @@ printKTX2Info2JSON(ktxStream* stream, KTX_header2* pHeader, ktx_uint32_t base_in
 
                 } else {
                     PRINT_INDENT(3, "\"imageFlags\":%s[%s", space, nl)
-
-                    for (uint32_t j = 0; j < 32; ++j) {
-                        uint32_t bit = 1u << j;
-                        if ((bit & (uint32_t) imageFlags) == 0)
-                            continue;
-
-                        const char* comma = (uint32_t) imageFlags >= (bit << 1u) ? "," : "";
-                        const char* str = ktxBUImageFlagsBitString(bit);
-                        if (strcmp(str, KHR_DFD_UNKNOWN_ENUM_VALUE_STRING) == 0)
-                            PRINT_INDENT(4, "%d%s%s", bit, comma, nl)
-                        else
-                            PRINT_INDENT(4, "\"%s\"%s%s", str, comma, nl)
-                    }
+                    printFlagBitsJSON(LENGTH_OF_INDENT(4), nl, imageFlags, ktxBUImageFlagsBitString);
                     PRINT_INDENT(3, "],%s", nl)
                 }
 
@@ -831,19 +840,17 @@ ktxPrintInfoForStream(ktxStream* stream)
     return result;
 }
 
-// TODO KTX Tools P4: Documentation
 /**
  * @internal
  * @~English
  * @brief Print information about a KTX2 file.
  *
- * Determine the format of the KTX file and print appropriate information.
  * The stream's read pointer should be at the start of the file.
  *
  * @param [in]  stream  pointer to the ktxStream reading the file.
  */
 KTX_error_code
-ktxPrintInfoJSONForStream(ktxStream* stream, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
+ktxPrintKTX2InfoJSONForStream(ktxStream* stream, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
 {
     ktx_uint8_t ktx2_ident_ref[12] = KTX2_IDENTIFIER_REF;
     KTX_header2 header;
@@ -865,6 +872,41 @@ ktxPrintInfoJSONForStream(ktxStream* stream, ktx_uint32_t base_indent, ktx_uint3
         return result;
 
     printKTX2Info2JSON(stream, &header, base_indent, indent_width, minified);
+    return result;
+}
+
+/**
+ * @internal
+ * @~English
+ * @brief Print information about a KTX2 file.
+ *
+ * The stream's read pointer should be at the start of the file.
+ *
+ * @param [in]  stream  pointer to the ktxStream reading the file.
+ */
+KTX_error_code
+ktxPrintKTX2InfoTextForStream(ktxStream* stream)
+{
+    ktx_uint8_t ktx2_ident_ref[12] = KTX2_IDENTIFIER_REF;
+    KTX_header2 header;
+    KTX_error_code result;
+
+    assert(stream != NULL);
+
+    result = stream->read(stream, &header, sizeof(ktx2_ident_ref));
+    if (result != KTX_SUCCESS)
+        return result;
+
+    // Compare identifier, is this a KTX2 file?
+    if (memcmp(header.identifier, ktx2_ident_ref, 12))
+        return KTX_UNKNOWN_FILE_FORMAT;
+
+    // Read rest of header.
+    result = stream->read(stream, &header.vkFormat, KTX2_HEADER_SIZE - sizeof(ktx2_ident_ref));
+    if (result != KTX_SUCCESS)
+        return result;
+
+    printKTX2Info2(stream, &header);
     return result;
 }
 
@@ -929,18 +971,19 @@ ktxPrintInfoForMemory(const ktx_uint8_t* bytes, ktx_size_t size)
     return result;
 }
 
-// TODO KTX Tools P4: Documentation
 /**
  * @~English
- * @brief Print information about a KTX file on a stdioStream in JSON format.
+ * @brief Print information about a KTX2 file on a stdioStream in JSON format.
  *
- * Determine the format of the KTX file and print appropriate information.
  * The stdioStream's read pointer should be at the start of the file.
  *
  * @param [in]  stream  pointer to the ktxStream reading the file.
+ * @param [in]  base_indent The number of indentations to include at the front of every line.
+ * @param [in]  indent_width The number of spaces to add with each nested scope.
+ * @param [in]  minified Specifies whether the JSON output should be minified.
  */
 KTX_error_code
-ktxPrintInfoJSONForStdioStream(FILE* stdioStream, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
+ktxPrintKTX2InfoJSONForStdioStream(FILE* stdioStream, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
 {
     KTX_error_code result;
     ktxStream stream;
@@ -950,28 +993,70 @@ ktxPrintInfoJSONForStdioStream(FILE* stdioStream, ktx_uint32_t base_indent, ktx_
 
     result = ktxFileStream_construct(&stream, stdioStream, KTX_FALSE);
     if (result == KTX_SUCCESS)
-        result = ktxPrintInfoJSONForStream(&stream, base_indent, indent_width, minified);
+        result = ktxPrintKTX2InfoJSONForStream(&stream, base_indent, indent_width, minified);
     return result;
 }
 
-// TODO KTX Tools P4: Documentation
 /**
  * @~English
- * @brief Print information about a KTX file in memory.
- *
- * Determine the format of the KTX file and print appropriate information.
+ * @brief Print information about a KTX2 file in memory in JSON format.
  *
  * @param [in]  bytes   pointer to the memory holding the KTX file.
  * @param [in]  size    length of the KTX file in bytes.
+ * @param [in]  base_indent The number of indentations to include at the front of every line.
+ * @param [in]  indent_width The number of spaces to add with each nested scope.
+ * @param [in]  minified Specifies whether the JSON output should be minified.
  */
 KTX_error_code
-ktxPrintInfoJSONForMemory(const ktx_uint8_t* bytes, ktx_size_t size, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
+ktxPrintKTX2InfoJSONForMemory(const ktx_uint8_t* bytes, ktx_size_t size, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
 {
     KTX_error_code result;
     ktxStream stream;
 
     result = ktxMemStream_construct_ro(&stream, bytes, size);
     if (result == KTX_SUCCESS)
-        result = ktxPrintInfoJSONForStream(&stream, base_indent, indent_width, minified);
+        result = ktxPrintKTX2InfoJSONForStream(&stream, base_indent, indent_width, minified);
+    return result;
+}
+
+/**
+ * @~English
+ * @brief Print information about a KTX2 file on a stdioStream in textual format.
+ *
+ * The stdioStream's read pointer should be at the start of the file.
+ *
+ * @param [in]  stream  pointer to the ktxStream reading the file.
+ */
+KTX_error_code
+ktxPrintKTX2InfoTextForStdioStream(FILE* stdioStream)
+{
+    KTX_error_code result;
+    ktxStream stream;
+
+    if (stdioStream == NULL)
+        return KTX_INVALID_VALUE;
+
+    result = ktxFileStream_construct(&stream, stdioStream, KTX_FALSE);
+    if (result == KTX_SUCCESS)
+        result = ktxPrintKTX2InfoTextForStream(&stream);
+    return result;
+}
+
+/**
+ * @~English
+ * @brief Print information about a KTX2 file in memory in textual format.
+ *
+ * @param [in]  bytes   pointer to the memory holding the KTX file.
+ * @param [in]  size    length of the KTX file in bytes.
+ */
+KTX_error_code
+ktxPrintKTX2InfoTextForMemory(const ktx_uint8_t* bytes, ktx_size_t size)
+{
+    KTX_error_code result;
+    ktxStream stream;
+
+    result = ktxMemStream_construct_ro(&stream, bytes, size);
+    if (result == KTX_SUCCESS)
+        result = ktxPrintKTX2InfoTextForStream(&stream);
     return result;
 }
