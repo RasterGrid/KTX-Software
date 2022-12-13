@@ -126,21 +126,25 @@ int CommandInfo::printInfoText(const _tstring& infile) {
     inf = _tfopen(infile.c_str(), "rb");
 #endif
 
-    if (inf) {
-        KTX_error_code result;
-
-        result = ktxPrintKTX2InfoTextForStdioStream(inf);
-        if (result ==  KTX_FILE_UNEXPECTED_EOF) {
-            std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
-            return 2;
-        }
-        if (result == KTX_UNKNOWN_FILE_FORMAT) {
-            std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
-            return 2;
-        }
-    } else {
+    if (!inf) {
         // TODO KTX Tools P5: Is strerror depricated?
         std::cerr << processName << ": Could not open input file \"" << infile << "\". " << strerror(errno) << std::endl;
+        return 2;
+    }
+
+    KTX_error_code result;
+
+    result = ktxPrintKTX2InfoTextForStdioStream(inf);
+    if (result ==  KTX_FILE_UNEXPECTED_EOF) {
+        std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
+        return 2;
+
+    } else if (result == KTX_UNKNOWN_FILE_FORMAT) {
+        std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
+        return 2;
+
+    } else if (result != KTX_SUCCESS) {
+        std::cerr << processName << ": " << infile << " failed to process KTX2 file: ERROR_CODE " << result << std::endl;
         return 2;
     }
 
@@ -180,9 +184,13 @@ int CommandInfo::printInfoJSON(const _tstring& infile, bool minified) {
     if (result ==  KTX_FILE_UNEXPECTED_EOF) {
         std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
         return 2;
-    }
-    if (result == KTX_UNKNOWN_FILE_FORMAT) {
+
+    } else if (result == KTX_UNKNOWN_FILE_FORMAT) {
         std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
+        return 2;
+
+    } else if (result != KTX_SUCCESS) {
+        std::cerr << processName << ": " << infile << " failed to process KTX2 file: ERROR_CODE " << result << std::endl;
         return 2;
     }
 

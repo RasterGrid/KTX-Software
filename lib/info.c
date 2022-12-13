@@ -80,11 +80,11 @@ bool isKnownKeyValueString(const char* key) {
         return true;
     if (strcmp(key, "KTXswizzle") == 0)
         return true;
-    if (strcmp(key, "KTXastcDecodeMode") == 0)
-        return true;
     if (strcmp(key, "KTXwriter") == 0)
         return true;
     if (strcmp(key, "KTXwriterScParams") == 0)
+        return true;
+    if (strcmp(key, "KTXastcDecodeMode") == 0)
         return true;
 
     return false;
@@ -477,7 +477,7 @@ extern const char* vkFormatString(VkFormat format);
 
 extern const char* ktxSupercompressionSchemeString(ktxSupercmpScheme scheme);
 
-const char* ktxBUImageFlagsBitString(buFlags bit_index, bool bit_value);
+const char* ktxBUImageFlagsBitString(ktx_uint32_t bit_index, bool bit_value);
 
 /**
  * @internal
@@ -1037,6 +1037,35 @@ ktxPrintKTX2InfoJSONForStdioStream(FILE* stdioStream, ktx_uint32_t base_indent, 
 
 /**
  * @~English
+ * @brief Print information about a KTX2 file in JSON format.
+ *
+ * @param [in]  filename     Filepath of the KTX2 file.
+ * @param [in]  base_indent  The number of indentations to include at the front of every line.
+ * @param [in]  indent_width The number of spaces to add with each nested scope.
+ * @param [in]  minified     Specifies whether the JSON output should be minified.
+ */
+KTX_error_code
+ktxPrintKTX2InfoJSONForNamedFile(const char* const filename, ktx_uint32_t base_indent, ktx_uint32_t indent_width, bool minified)
+{
+    FILE* file = NULL;
+
+#ifdef _WIN32
+    fopen_s(&file, filename, "rb");
+#else
+    file = fopen(filename, "rb");
+#endif
+
+    if (!file)
+        return KTX_FILE_OPEN_FAILED;
+
+    KTX_error_code result = ktxPrintKTX2InfoJSONForStdioStream(file, base_indent, indent_width, minified);
+
+    fclose(file);
+    return result;
+}
+
+/**
+ * @~English
  * @brief Print information about a KTX2 file in memory in JSON format.
  *
  * @param [in]  bytes   pointer to the memory holding the KTX file.
@@ -1077,6 +1106,32 @@ ktxPrintKTX2InfoTextForStdioStream(FILE* stdioStream)
     result = ktxFileStream_construct(&stream, stdioStream, KTX_FALSE);
     if (result == KTX_SUCCESS)
         result = ktxPrintKTX2InfoTextForStream(&stream);
+    return result;
+}
+
+/**
+ * @~English
+ * @brief Print information about a KTX2 file in JSON format.
+ *
+ * @param [in]  filename     Filepath of the KTX2 file.
+ */
+KTX_error_code
+ktxPrintKTX2InfoTextForNamedFile(const char* const filename)
+{
+    FILE* file = NULL;
+
+#ifdef _WIN32
+    fopen_s(&file, filename, "rb");
+#else
+    file = fopen(filename, "rb");
+#endif
+
+    if (!file)
+        return KTX_FILE_OPEN_FAILED;
+
+    KTX_error_code result = ktxPrintKTX2InfoTextForStdioStream(file);
+
+    fclose(file);
     return result;
 }
 

@@ -139,7 +139,7 @@ ktxSupercompressionSchemeString(ktxSupercmpScheme scheme)
 *
 * @internal Use UTF-8 for translated message strings.
 */
-const char* ktxBUImageFlagsBitString(buFlags bit_index, bool bit_value)
+const char* ktxBUImageFlagsBitString(ktx_uint32_t bit_index, bool bit_value)
 {
     if (!bit_value)
         return NULL;
