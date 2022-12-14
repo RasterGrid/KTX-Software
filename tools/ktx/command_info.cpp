@@ -16,10 +16,49 @@
 
 namespace ktx {
 
-// TODO KTX Tools P2: Proper doxygen documentation
-// ktx info <options> <input_file>
-//          --format: text | json | mini-json
-//              Output format. Defaults to text.
+/** @page ktxtools_info ktx info
+@~English
+
+Prints information about a KTX2 file.
+
+@section ktxtools_info_synopsis SYNOPSIS
+    ktx info [options] @e input_file
+
+@section ktxtools_info_description DESCRIPTION
+    @b ktx @b info prints information about the KTX2 file provided as argument.
+
+    @note @b ktx @b info prints using UTF-8 encoding. If your console is not
+    set for UTF-8 you will see incorrect characters in output of the file
+    identifier on each side of the "KTX nn".
+
+    The following options are available:
+    <dl>
+        <dt>--format &lt;text|json|mini-json&gt;</dt>
+        <dd>Specifies the output format.
+            @b text - Human readable text based format.
+            @b json - Formatted JSON.
+            @b mini-json - Minified JSON (Every optional formatting is skipped).
+            The default format is @b text.
+        </dd>
+    </dl>
+    @snippet{doc} ktx/command.h command options
+
+@section ktxtools_info_exitstatus EXIT STATUS
+    @b ktx @b info exits
+        0 on success,
+        1 on command line errors and
+        2 if the input file parsing failed.
+
+@section ktxtools_info_history HISTORY
+
+@par Version 4.0
+ - Initial version
+
+@section ktxtools_info_author AUTHOR
+    - Mátyás Császár [Vader], RasterGrid www.rastergrid.com
+    - Daniel Rákos, RasterGrid www.rastergrid.com
+*/
+
 class CommandInfo : public Command {
     struct Options {
         enum class OutputFormat {
