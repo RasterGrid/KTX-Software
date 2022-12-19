@@ -152,7 +152,7 @@ printKVData(ktx_uint8_t* pKvd, ktx_uint32_t kvdLen)
                 fprintf(stdout, "\n");
                 fprintf(stdout, "    duration: %d\n", duration);
                 fprintf(stdout, "    timescale: %d\n", timescale);
-                fprintf(stdout, "    loopCount: %d\n", loopCount);
+                fprintf(stdout, "    loopCount: %d%s\n", loopCount, loopCount == 0 ? " (infinite)" : "");
 
             } else if (strcmp(key, "KTXcubemapIncomplete") == 0) {
                 assert(valueLen == sizeof(ktx_uint8_t));

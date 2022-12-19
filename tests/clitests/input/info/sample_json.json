@@ -2,7 +2,7 @@
     "description": "Sample ktx info positive tests",
     "command": "ktx info --format json ../testimages/${file}.ktx2",
     "status": 0,
-    "stdout": "golden/info/${file}_json.out",
+    "stdout": "golden/info/${file}.out.json",
     "args": {
         "file": [
             "alpha_simple_basis",

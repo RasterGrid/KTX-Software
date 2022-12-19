@@ -133,9 +133,9 @@ const char* dfdToStringColorPrimaries(khr_df_primaries_e value) {
     switch (value) {
     case KHR_DF_PRIMARIES_UNSPECIFIED:
         return "KHR_DF_PRIMARIES_UNSPECIFIED";
-    case KHR_DF_PRIMARIES_SRGB:
-    // case KHR_DF_PRIMARIES_BT709: // Fallthrough, Matching values
-        return "KHR_DF_PRIMARIES_SRGB";
+    case KHR_DF_PRIMARIES_BT709:
+    // case KHR_DF_PRIMARIES_SRGB: // Fallthrough, Matching values
+        return "KHR_DF_PRIMARIES_BT709";
     case KHR_DF_PRIMARIES_BT601_EBU:
         return "KHR_DF_PRIMARIES_BT601_EBU";
     case KHR_DF_PRIMARIES_BT601_SMPTE:
@@ -702,9 +702,10 @@ void printDFD(uint32_t *DFD)
     PRINT_ENUM(KHR_DFDVAL(BDB, VENDORID), dfdToStringVendorID);
     printf("\n");
 
-    printf("Descriptor block size: %d (%d samples)\nVersionNumber: ",
-           KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE),
-           samples);
+    printf("Descriptor block size: %d (%d sample%s)\nVersionNumber: ",
+            KHR_DFDVAL(BDB, DESCRIPTORBLOCKSIZE),
+            samples,
+            samples != 1 ? "s" : "");
     PRINT_ENUM(KHR_DFDVAL(BDB, VERSIONNUMBER), dfdToStringVersionNumber);
     printf("\n");
 
@@ -741,7 +742,7 @@ void printDFD(uint32_t *DFD)
         printf("    Qualifiers: 0x%x (", qualifiers);
         printFlagBits(qualifiers, dfdToStringSampleDatatypeQualifiers);
         printf(")\n");
-        printf("    Channel: 0x%x", channelId);
+        printf("    Channel ID: 0x%x", channelId);
         {
             const char* str = dfdToStringChannelId(model, channelId);
             if (str)

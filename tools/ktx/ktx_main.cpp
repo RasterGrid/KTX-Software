@@ -5,7 +5,6 @@
 
 #include "command.h"
 #include "stdafx.h"
-#include "utility.h"
 
 #include <iostream>
 #include <unordered_map>
@@ -96,8 +95,14 @@ public:
 };
 
 int Tools::main(int argc, _TCHAR* argv[]) {
-    (void) argc;
     (void) argv;
+
+    if (argc < 2) {
+        // TODO KTX Tools P5: Print usage, Failure: missing sub command
+        std::cerr << "Print usage, Failure: missing sub command" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     // TODO KTX Tools P5: Print usage, Failure: incorrect sub command {commandName}
     std::cerr << "Print usage, Failure: incorrect sub command {commandName}" << std::endl;
     return EXIT_FAILURE;
@@ -114,24 +119,22 @@ std::unordered_map<std::string, ktx::pfnBuiltinCommand> builtinCommands = {
 };
 
 int _tmain(int argc, _TCHAR* argv[]) {
-    if (argc < 2) {
-        // TODO KTX Tools P5: Print usage, Failure: missing sub command
-        std::cerr << "Print usage, Failure: missing sub command" << std::endl;
-        return EXIT_FAILURE;
+    if (argc >= 2) {
+        // Has a subcommand, attempt to lookup
+
+        const auto it = builtinCommands.find(argv[1]);
+        if (it != builtinCommands.end()) {
+            // Call built-in subcommand, trimming the first parameter.
+            return it->second(argc - 1, argv + 1);
+        } else {
+            // In the future it is possible to add further logic here to allow loading command plugins
+            // from shared libraries or call external commands. There is no defined configuration
+            // mechanism to do so, but the command framework has been designed to be able to build
+            // subcommands as separate executables or shared libraries.
+        }
     }
 
-    const auto it = builtinCommands.find(argv[1]);
-    if (it != builtinCommands.end()) {
-        // Call built-in subcommand, trimming the first parameter.
-        return it->second(argc - 1, argv + 1);
-    } else {
-        // In the future it is possible to add further logic here to allow loading command plugins
-        // from shared libraries or call external commands. There is no defined configuration
-        // mechanism to do so, but the command framework has been designed to be able to build
-        // subcommands as separate executables or shared libraries.
-    }
-
-    // If no sub-command was found we simply call the main command's entry point.
-    ktx::Tools cmd{};
+    // If no sub-command was specified or if it was not found, call the main command's entry point.
+    ktx::Tools cmd;
     return cmd.main(argc, argv);
 }

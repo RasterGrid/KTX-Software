@@ -2,7 +2,7 @@
     "description": "Sample ktx validate positive tests",
     "command": "ktx validate ../testimages/${file}.ktx2",
     "status": 0,
-    "stdout": "golden/validate/success.out",
+    "stdout": "golden/validate/success.out.txt",
     "args": {
         "file": [
             "alpha_simple_basis",

@@ -5,6 +5,7 @@
 
 add_executable(ktxtools
         command.cpp
+        command.h
         command_info.cpp
         command_validate.cpp
         ktx_main.cpp

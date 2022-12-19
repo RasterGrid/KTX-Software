@@ -145,7 +145,7 @@ const char* ktxBUImageFlagsBitString(ktx_uint32_t bit_index, bool bit_value)
         return NULL;
 
     switch (1u << bit_index) {
-        case eBUImageIsPframe: return "eBUImageIsPframe";
+        case ETC1S_P_FRAME: return "ETC1S_P_FRAME";
         default: return NULL;
     }
 }
