@@ -10,6 +10,7 @@
 #include <fmt/printf.h>
 
 #include "stdafx.h"
+#include "utility.h"
 
 
 // -------------------------------------------------------------------------------------------------
@@ -40,8 +41,11 @@ Prints information about a KTX2 file.
             @b mini-json - Minified JSON (Every optional formatting is skipped).
             The default format is @b text.
         </dd>
+        <dt>-h, --help</dt>
+        <dd>Print the usage message and exit.</dd>
+        <dt>-v, --version</dt>
+        <dd>Print the version number of this program and exit.</dd>
     </dl>
-    @snippet{doc} ktx/command.h command options
 
 @section ktxtools_info_exitstatus EXIT STATUS
     @b ktx @b info exits
@@ -74,8 +78,8 @@ class CommandInfo : public Command {
     Options options;
 
 public:
-    // TODO KTX Tools P5: Support --version
-    // TODO KTX Tools P5: Support --help with proper usage
+    // TODO Tools P5: Support --version
+    // TODO Tools P5: Support --help with proper usage
     void initializeOptions();
     virtual bool processOption(argparser& parser, int opt) override;
     void processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile);
@@ -107,7 +111,7 @@ bool CommandInfo::processOption(argparser& parser, int opt) {
         } else if (parser.optarg == "mini-json") {
             options.format = Options::OutputFormat::json_mini;
         } else {
-            // TODO KTX Tools P5: Print usage, Failure: unsupported format
+            // TODO Tools P5: Print usage, Failure: unsupported format
             std::cerr << "Print usage, Failure: unsupported format" << std::endl;
             return false;
         }
@@ -121,9 +125,9 @@ bool CommandInfo::processOption(argparser& parser, int opt) {
 
 void CommandInfo::processPositional(const std::vector<_tstring>& infiles, const _tstring& outfile) {
     if (infiles.size() > 1) {
-        // TODO KTX Tools P5: Print usage, Failure: infiles.size() > 1
+        // TODO Tools P5: Print usage, Failure: infiles.size() > 1
         std::cerr << "Print usage, Failure: infiles.size() > 1" << std::endl;
-        // TODO KTX Tools P1: Instead of std::exit handle argument parsing failures and stop execution
+        // TODO Tools P1: Instead of std::exit handle argument parsing failures and stop execution
         std::exit(1);
         // return false;
     }
@@ -141,16 +145,9 @@ int CommandInfo::main(int argc, _TCHAR* argv[]) {
 }
 
 int CommandInfo::printInfo(const _tstring& infile, Options::OutputFormat format) {
-    FILE* inf;
+    FileGuard file(infile.c_str(), "rb");
 
-    // TODO KTX Tools P5: fclose?
-#ifdef _WIN32
-    _tfopen_s(&inf, infile.c_str(), "rb");
-#else
-    inf = _tfopen(infile.c_str(), "rb");
-#endif
-
-    if (!inf) {
+    if (!file) {
         const auto ec = std::make_error_code(static_cast<std::errc>(errno));
         fmt::print(stderr, "{}: Could not open input file \"{}\". {}: {}\n", processName, infile, ec, ec.message());
         return 2;
@@ -160,15 +157,15 @@ int CommandInfo::printInfo(const _tstring& infile, Options::OutputFormat format)
 
     switch (format) {
     case Options::OutputFormat::text:
-        result = printInfoText(inf);
+        result = printInfoText(file);
         break;
 
     case Options::OutputFormat::json:
-        result = printInfoJSON(inf, false);
+        result = printInfoJSON(file, false);
         break;
 
     case Options::OutputFormat::json_mini:
-        result = printInfoJSON(inf, true);
+        result = printInfoJSON(file, true);
         break;
 
     default:
@@ -201,10 +198,10 @@ KTX_error_code CommandInfo::printInfoJSON(FILE* inf, bool minified) {
     const char* nl = minified ? "" : "\n";
 
     fmt::print("{{{}", nl);
-    // TODO KTX Tools P5: ktx-schema-url-1.0 will has to be replaced with the actual URL
+    // TODO Tools P5: ktx-schema-url-1.0 will has to be replaced with the actual URL
     fmt::print("{}\"$id\":{}\"ktx-schema-url-1.0\",{}", minified ? "" : "    ", space, nl);
 
-    // TODO KTX Tools P4: Call validate JSON print and include "valid" and "messages" in the JSON output
+    // TODO Tools P4: Call validate JSON print and include "valid" and "messages" in the JSON output
     // result = validateAndPrintJSON(inf, 1, 4, minified);
     // fmt::print(",{}", nl);
     const auto ktx_ec = ktxPrintKTX2InfoJSONForStdioStream(inf, 1, 4, minified);
