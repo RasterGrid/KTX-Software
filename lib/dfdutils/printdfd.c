@@ -735,20 +735,20 @@ void printDFD(uint32_t *DFD)
            KHR_DFDVAL(BDB, BYTESPLANE6),
            KHR_DFDVAL(BDB, BYTESPLANE7));
     for (sample = 0; sample < samples; ++sample) {
-        khr_df_model_channels_e channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
+        khr_df_model_channels_e channelType = KHR_DFDSVAL(BDB, sample, CHANNELID);
         printf("Sample %d:\n", sample);
 
         khr_df_sample_datatype_qualifiers_e qualifiers = KHR_DFDSVAL(BDB, sample, QUALIFIERS) >> 4;
         printf("    Qualifiers: 0x%x (", qualifiers);
         printFlagBits(qualifiers, dfdToStringSampleDatatypeQualifiers);
         printf(")\n");
-        printf("    Channel ID: 0x%x", channelId);
+        printf("    Channel Type: 0x%x", channelType);
         {
-            const char* str = dfdToStringChannelId(model, channelId);
+            const char* str = dfdToStringChannelId(model, channelType);
             if (str)
                 printf(" (%s)\n", str);
             else
-                printf(" (%d)\n", channelId);
+                printf(" (%d)\n", channelType);
         }
         printf("    Length: %d bits Offset: %d\n",
                KHR_DFDSVAL(BDB, sample, BITLENGTH) + 1,
@@ -865,12 +865,12 @@ void printDFDJSON(uint32_t* DFD, uint32_t base_indent, uint32_t indent_width, bo
                 PRINT_INDENT(4, "],%s", nl)
             }
 
-            khr_df_model_channels_e channelId = KHR_DFDSVAL(BDB, sample, CHANNELID);
-            const char* channelStr = dfdToStringChannelId(model, channelId);
+            khr_df_model_channels_e channelType = KHR_DFDSVAL(BDB, sample, CHANNELID);
+            const char* channelStr = dfdToStringChannelId(model, channelType);
             if (channelStr)
                 PRINT_INDENT(4, "\"channelType\":%s\"%s\",%s", space, channelStr, nl)
             else
-                PRINT_INDENT(4, "\"channelType\":%s%d,%s", space, channelId, nl)
+                PRINT_INDENT(4, "\"channelType\":%s%d,%s", space, channelType, nl)
 
             PRINT_INDENT(4, "\"bitLength\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITLENGTH), nl)
             PRINT_INDENT(4, "\"bitOffset\":%s%d,%s", space, KHR_DFDSVAL(BDB, sample, BITOFFSET), nl)
