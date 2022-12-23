@@ -6,8 +6,8 @@
 #include "command.h"
 
 #include <ktx.h>
-
-#include <iostream>
+#include <fmt/os.h> // For std::error_code
+#include <fmt/printf.h>
 
 #include "stdafx.h"
 
@@ -151,8 +151,8 @@ int CommandInfo::printInfo(const _tstring& infile, Options::OutputFormat format)
 #endif
 
     if (!inf) {
-        // TODO KTX Tools P5: Is strerror depricated?
-        std::cerr << processName << ": Could not open input file \"" << infile << "\". " << strerror(errno) << std::endl;
+        const auto ec = std::make_error_code(static_cast<std::errc>(errno));
+        fmt::print(stderr, "{}: Could not open input file \"{}\". {}: {}\n", processName, infile, ec, ec.message());
         return 2;
     }
 
@@ -177,15 +177,15 @@ int CommandInfo::printInfo(const _tstring& infile, Options::OutputFormat format)
     }
 
     if (result ==  KTX_FILE_UNEXPECTED_EOF) {
-        std::cerr << processName << ": Unexpected end of file reading \"" << infile << "\"." << std::endl;
+        fmt::print(stderr, "{}: Unexpected end of file reading \"{}\".\n", processName, infile);
         return 2;
 
     } else if (result == KTX_UNKNOWN_FILE_FORMAT) {
-        std::cerr << processName << ": " << infile << " is not a KTX2 file." << std::endl;
+        fmt::print(stderr, "{}: \"{}\" is not a KTX2 file.\n", processName, infile);
         return 2;
 
     } else if (result != KTX_SUCCESS) {
-        std::cerr << processName << ": " << infile << " failed to process KTX2 file: ERROR_CODE " << result << std::endl;
+        fmt::print(stderr, "{}: {} failed to process KTX2 file: ERROR_CODE {}\n", processName, infile, static_cast<int>(result));
         return 2;
     }
 
@@ -200,17 +200,17 @@ KTX_error_code CommandInfo::printInfoJSON(FILE* inf, bool minified) {
     const char* space = minified ? "" : " ";
     const char* nl = minified ? "" : "\n";
 
-    std::cout << "{" << nl;
+    fmt::print("{{{}", nl);
     // TODO KTX Tools P5: ktx-schema-url-1.0 will has to be replaced with the actual URL
-    std::cout << (minified ? "" : "    ") << "\"$id\":" << space << "\"ktx-schema-url-1.0\"," << nl;
+    fmt::print("{}\"$id\":{}\"ktx-schema-url-1.0\",{}", minified ? "" : "    ", space, nl);
 
     // TODO KTX Tools P4: Call validate JSON print and include "valid" and "messages" in the JSON output
     // result = validateAndPrintJSON(inf, 1, 4, minified);
-    // std::cout << "," << nl;
-    const auto ec = ktxPrintKTX2InfoJSONForStdioStream(inf, 1, 4, minified);
-    std::cout << "}" << nl;
+    // fmt::print(",{}", nl);
+    const auto ktx_ec = ktxPrintKTX2InfoJSONForStdioStream(inf, 1, 4, minified);
+    fmt::print("}}{}", nl);
 
-    return ec;
+    return ktx_ec;
 }
 
 } // namespace ktx
