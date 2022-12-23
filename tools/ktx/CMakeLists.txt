@@ -32,6 +32,7 @@ target_link_libraries(
     ktxtools
     ktx
     objUtil
+    fmt::fmt
 )
 
 target_compile_definitions(
