@@ -160,21 +160,41 @@ int CommandValidate::validate(const _tstring& infile, bool warningsAsErrors, Opt
             fmt::print("    {}", issue.details);
         });
 
-    case Options::OutputFormat::json: // [[fallthrough]];
-    case Options::OutputFormat::json_mini:
+    case Options::OutputFormat::json: [[fallthrough]];
+    case Options::OutputFormat::json_mini: {
+        const auto base_indent = format == Options::OutputFormat::json ? +0 : 0;
+        const auto indent_width = format == Options::OutputFormat::json ? 4 : 0;
         const auto space = format == Options::OutputFormat::json ? " " : "";
         const auto nl = format == Options::OutputFormat::json ? "\n" : "";
-        const auto indent = 0;
-        const auto indentWidth = 4;
 
-        return validateFile(infile, warningsAsErrors, [&](const ValidationReport& issue) {
-            fmt::print("{:{}}{{{}", "", indent, nl);
-            fmt::print("{:{}}\"id\":{}{}{}", "", indent + indentWidth, space, issue.id, nl);
-            fmt::print("{:{}}\"type\":{}\"{}\"{}", "", indent + indentWidth, space, toString(issue.type), nl);
-            fmt::print("{:{}}\"message\":{}\"{}\"{}", "", indent + indentWidth, space, issue.message, nl);
-            fmt::print("{:{}}\"details\":{}\"{}\"{}", "", indent + indentWidth, space, issue.details, nl);
-            fmt::print("{:{}}}}{}", "", indent, nl);
+        PrintIndent pi{base_indent, indent_width};
+
+        pi(0, "{{{}", nl);
+        bool first = true;
+        const auto result = validateFile(infile, warningsAsErrors, [&](const ValidationReport& issue) {
+            if (!std::exchange(first, false)) {
+                pi(2, "}},{}", nl);
+            } else {
+                pi(1, "\"valid\":{}false,{}", space, nl);
+                pi(1, "\"messages\":{}[{}", space, nl);
+            }
+            pi(2, "{{{}", nl);
+            pi(3, "\"id\":{}{},{}", space, issue.id, nl);
+            pi(3, "\"type\":{}\"{}\",{}", space, toString(issue.type), nl);
+            pi(3, "\"message\":{}\"{}\",{}", space, replace_all_copy(issue.message, "\"", "\\\""), nl);
+            pi(3, "\"details\":{}\"{}\"{}", space, replace_all_copy(issue.details, "\"", "\\\""), nl);
         });
+        if (!first) {
+            pi(2, "}}{}", nl);
+            pi(1, "]{}", nl);
+        } else {
+            pi(1, "\"valid\":{}true,{}", space, nl);
+            pi(1, "\"messages\":{}[]{}", space, nl);
+        }
+        pi(0, "}}{}", nl);
+
+        return result;
+    }
     }
 
     return 1;

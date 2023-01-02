@@ -74,7 +74,7 @@ struct IOError {
     };
     static constexpr IssueFatal UnexpectedEOF{
         1003, "Unexpected end of file.",
-        "Unexpected end of file. Expected {} more byte for {} but only found {}."
+        "Unexpected end of file. Expected {} more byte for {} but only found {} byte."
     };
     static constexpr IssueFatal FileSeekEndFailure{
         1004, "Failed to seek to the end of the file.",
@@ -92,7 +92,8 @@ struct IOError {
 
 struct FileError {
     static constexpr IssueFatal NotKTX2{
-        2001, "Not a KTX2 file.", "Not a KTX2 file. Expected file identifier \"«KTX 20»\\r\\n\\x1A\\n\" was not found"
+        2001, "Not a KTX2 file.",
+        "Not a KTX2 file. The beginning of the file does not matches the expected file identifier \"«KTX 20»\\r\\n\\x1A\\n\"."
     };
     // static constexpr IssueFatal CreateFailure{
     //     2002, "ktxTexture2 creation failed: {}."
@@ -111,8 +112,8 @@ struct HeaderData {
         3002, "Invalid VkFormat.",
         "Invalid VkFormat {}."
     };
-    static constexpr IssueWarning UnknownFormat{
-        3003, "Unknown VkFormat.",
+    static constexpr IssueWarning VendorFormat{
+        3003, "Unknown VkFormat. Possibly an extension format.",
         "Unknown VkFormat {}, possibly an extension format."
     };
 
@@ -124,6 +125,9 @@ struct HeaderData {
         3005, "Invalid typeSize. typeSize must be 1 for block-compressed or supercompressed formats.",
         "typeSize is {} but for block-compressed or supercompressed format {} it must be 1."
     };
+    // static constexpr IssueError TypeSizeMismatch{
+    //     30, "typeSize, {}, does not match data described by the DFD."
+    // };
 
     static constexpr IssueError WidthZero{
         3006, "Invalid pixelWidth. pixelWidth cannot be 0.",
@@ -162,7 +166,7 @@ struct HeaderData {
         "File contains a 3D array texture. No APIs support these."
     };
     static constexpr IssueError InvalidFaceCount{
-        3015, "Invalid faceCount. faceCount must be 6 for and only for Cubemaps and Cubemap Arrays and 1 otherwise.",
+        3015, "Invalid faceCount. faceCount must be either 6 for Cubemaps and Cubemap Arrays or 1 otherwise.",
         "faceCount is {} but it must be either 6 for Cubemaps and Cubemap Arrays or 1 otherwise."
     };
     static constexpr IssueError TooManyMipLevels{
@@ -184,38 +188,113 @@ struct HeaderData {
 
     // Index related issues:
 
-    // static constexpr IssueError InvalidOptionalIndexEntry{
-    //     30, "Invalid {} index entry. Only 1 of offset & length != 0."
+    static constexpr IssueError IndexDFDZeroOffset{
+        3020, "Invalid dataFormatDescriptor.byteOffset. byteOffset cannot be 0.",
+        "dataFormatDescriptor.byteOffset is 0, but the file must have a dataFormatDescriptor."
+    };
+    static constexpr IssueError IndexDFDAlignment{
+        3021, "Invalid dataFormatDescriptor.byteOffset. Defined region must be aligned to 4 byte.",
+        "dataFormatDescriptor.byteOffset is {}, but the byteOffset must be aligned to 4 byte."
+    };
+    static constexpr IssueError IndexDFDZeroLength{
+        3022, "Invalid dataFormatDescriptor.byteLength. byteLength cannot be 0.",
+        "dataFormatDescriptor.byteLength is 0, but the file must have a dataFormatDescriptor."
+    };
+    static constexpr IssueError IndexDFDInvalid{
+        3023, "Invalid dataFormatDescriptor index. Defined region cannot exceed the size of the file.",
+        "dataFormatDescriptor.byteOffset is {} and dataFormatDescriptor.byteLength is {}, but the file only {} byte long."
+    };
+
+    static constexpr IssueError IndexKVDOffsetWithoutLength{
+        3024, "Invalid keyValueData.byteOffset. byteOffset must be 0 if the byteLength is 0.",
+        "keyValueData.byteOffset is {}, but if the byteLength is 0 it must also be 0."
+    };
+    static constexpr IssueError IndexKVDAlignment{
+        3025, "Invalid keyValueData.byteOffset. Defined region must be aligned to 4 byte.",
+        "keyValueData.byteOffset is {}, but the byteOffset must be aligned to 4 byte."
+    };
+    static constexpr IssueError IndexKVDInvalid{
+        3026, "Invalid keyValueData index. Defined region cannot exceed the size of the file.",
+        "keyValueData.byteOffset is {} and keyValueData.byteLength is {}, but the file only {} byte long."
+    };
+
+    static constexpr IssueError IndexSGDOffsetWithoutLength{
+        3027, "Invalid supercompressionGlobalData.byteOffset. byteOffset must be 0 if the byteLength is 0.",
+        "supercompressionGlobalData.byteOffset is {}, but if the byteLength is 0 it must also be 0."
+    };
+    static constexpr IssueError IndexSGDAlignment{
+        3028, "Invalid supercompressionGlobalData.byteOffset. Defined region must be aligned to 8 byte.",
+        "supercompressionGlobalData.byteOffset is {}, but the byteOffset must be aligned to 8 byte."
+    };
+    static constexpr IssueError IndexSGDMissing{
+        3029, "Invalid supercompressionGlobalData.byteLength. byteLength cannot be 0 for supercompression schemes with global data.",
+        "supercompressionGlobalData.byteLength is 0, but for supercompression scheme {} (which has global data) it cannot be 0."
+    };
+    static constexpr IssueError IndexSGDExists{
+        3030, "Invalid supercompressionGlobalData.byteLength. byteLength must be 0 for supercompression schemes without global data.",
+        "supercompressionGlobalData.byteLength is {}, but for supercompression scheme {} (which has no global data) it must be 0."
+    };
+    static constexpr IssueError IndexSGDInvalid{
+        3031, "Invalid supercompressionGlobalData index. Defined region cannot exceed the size of the file.",
+        "supercompressionGlobalData.byteOffset is {} and supercompressionGlobalData.byteLength is {}, but the file only {} byte long."
+    };
+
+    static constexpr IssueError IndexDFDContinuity{
+        3032, "Invalid dataFormatDescriptor.byteOffset. DFD region must immediately follow the level index.",
+        "dataFormatDescriptor.byteOffset is {}, but DFD region must immediately follow (with 4 byte alignment) the level index so it must {}."
+    };
+    static constexpr IssueError IndexKVDContinuity{
+        3033, "Invalid keyValueData.byteOffset. KVD region must immediately follow the DFD region.",
+        "keyValueData.byteOffset is {}, but KVD region must immediately follow (with 4 byte alignment) the DFD region so it must {}."
+    };
+    static constexpr IssueError IndexSGDContinuity{
+        3034, "Invalid supercompressionGlobalData.byteOffset. SGD region must immediately follow the KVD region.",
+        "supercompressionGlobalData.byteOffset is {}, but SGD region must immediately follow (with 8 byte alignment) the KVD region so it must {}."
+    };
+};
+
+struct LevelIndex {
+    // static constexpr IssueError IncorrectByteLength{
+    //     40, "Level {} byteLength 0x{:X} does not match expected value 0x{:X}."
     // };
-    // static constexpr IssueError InvalidRequiredIndexEntry{
-    //     30, "Index for required entry has offset or length == 0."
+    // static constexpr IssueError ByteOffsetTooSmall{
+    //     40, "Level {} byteOffset 0x{:X} is smaller than expected value 0x{:X}."
     // };
-    // static constexpr IssueError InvalidDFDOffset{
-    //     30, "Invalid dfdByteOffset. DFD must immediately follow level index."
+    // static constexpr IssueError IncorrectByteOffset{
+    //     40, "Level {} byteOffset 0x{:X} does not match expected value 0x{:X}."
     // };
-    // static constexpr IssueError InvalidKVDOffset{
-    //     30, "Invalid kvdByteOffset. KVD must immediately follow DFD."
+    // static constexpr IssueError IncorrectUncompressedByteLength{
+    //     40, "Level {} uncompressedByteLength 0x{:X} does not match expected value 0x{:X}."
     // };
-    // static constexpr IssueError InvalidSGDOffset{
-    //     30, "Invalid sgdByteOffset. SGD must follow KVD."
+    // static constexpr IssueError UnequalByteLengths{
+    //     40, "Level {} uncompressedByteLength does not match byteLength."
     // };
-    // static constexpr IssueError TypeSizeMismatch{
-    //     30, "typeSize, {}, does not match data described by the DFD."
+    // static constexpr IssueError UnalignedOffset{
+    //     40, "Level {} byteOffset is not aligned to required {} byte alignment."
     // };
-    // static constexpr IssueError ZeroLevelCountForBC{
-    //     30, "levelCount must be > 0 for block-compressed formats."
+    // static constexpr IssueError ExtraPadding{
+    //     40, "Level {} has disallowed extra padding."
+    // };
+    // static constexpr IssueError ZeroOffsetOrLength{
+    //     40, "Level {}'s byteOffset or byteLength is 0."
+    // };
+    // static constexpr IssueError ZeroUncompressedLength{
+    //     40, "Level {}'s uncompressedByteLength is 0."
+    // };
+    // static constexpr IssueError IncorrectLevelOrder{
+    //     40, "Larger mip levels are before smaller."
     // };
 };
 
 struct ValidatorError {
     // static constexpr IssueFatal CreateDfdFailure{
-    //     40, "Creation of DFD matching {} failed."
+    //     60, "Creation of DFD matching {} failed."
     // };
     // static constexpr IssueFatal IncorrectDfd{
-    //     40, "DFD created for {} confused interpretDFD()."
+    //     60, "DFD created for {} confused interpretDFD()."
     // };
     // static constexpr IssueFatal DfdValidationFailure{
-    //     40, "DFD validation passed a DFD which extactFormatInfo() could not handle."
+    //     60, "DFD validation passed a DFD which extactFormatInfo() could not handle."
     // };
 };
 
@@ -315,87 +394,120 @@ struct ValidatorError {
 //         50, "DFD bytesPlane0 value {} differs from expected {}."
 //     };
 // };
-//
-// struct LevelIndex {
-//     static constexpr IssueError IncorrectByteLength{
-//         60, "Level {} byteLength 0x{:X} does not match expected value 0x{:X}."
-//     };
-//     static constexpr IssueError ByteOffsetTooSmall{
-//         60, "Level {} byteOffset 0x{:X} is smaller than expected value 0x{:X}."
-//     };
-//     static constexpr IssueError IncorrectByteOffset{
-//         60, "Level {} byteOffset 0x{:X} does not match expected value 0x{:X}."
-//     };
-//     static constexpr IssueError IncorrectUncompressedByteLength{
-//         60, "Level {} uncompressedByteLength 0x{:X} does not match expected value 0x{:X}."
-//     };
-//     static constexpr IssueError UnequalByteLengths{
-//         60, "Level {} uncompressedByteLength does not match byteLength."
-//     };
-//     static constexpr IssueError UnalignedOffset{
-//         60, "Level {} byteOffset is not aligned to required {} byte alignment."
-//     };
-//     static constexpr IssueError ExtraPadding{
-//         60, "Level {} has disallowed extra padding."
-//     };
-//     static constexpr IssueError ZeroOffsetOrLength{
-//         60, "Level {}'s byteOffset or byteLength is 0."
-//     };
-//     static constexpr IssueError ZeroUncompressedLength{
-//         60, "Level {}'s uncompressedByteLength is 0."
-//     };
-//     static constexpr IssueError IncorrectLevelOrder{
-//         60, "Larger mip levels are before smaller."
-//     };
-// };
-//
-// struct Metadata {
-//     static constexpr IssueError MissingNulTerminator{
-//         70, "Required NUL terminator missing from metadata key beginning \"%5s\"."
-//                         "Abandoning validation of individual metadata entries."
-//     };
-//     static constexpr IssueError ForbiddenBOM1{
-//         70, "Metadata key beginning \"%5s\" has forbidden BOM."
-//     };
-//     static constexpr IssueError ForbiddenBOM2{
-//         70, "Metadata key beginning \"{}\" has forbidden BOM."
-//     };
-//     static constexpr IssueError InvalidStructure{
-//         70, "Invalid metadata structure? keyAndValueByteLengths failed to total kvdByteLength"
-//                         " after {} KV pairs."
-//     };
-//     static constexpr IssueError MissingFinalPadding{
-//         70, "Required valuePadding after last metadata value missing."
-//     };
-//     static constexpr IssueError OutOfOrder{
-//         70, "Metadata keys are not sorted in codepoint order."
-//     };
-//     static constexpr IssueWarning CustomMetadata{
-//         70, "Custom metadata \"{}\" found."
-//     };
-//     static constexpr IssueError IllegalMetadata{
-//         70, "Unrecognized metadata \"{}\" found with KTX or ktx prefix found."
-//     };
-//     static constexpr IssueWarning ValueNotNulTerminated{
-//         70, "{} value missing encouraged NUL termination."
-//     };
-//     static constexpr IssueError InvalidValue{
-//         70, "{} has invalid value."
-//     };
-//     static constexpr IssueError NoRequiredKTXwriter{
-//         70, "No KTXwriter key. Required when KTXwriterScParams is present."
-//     };
-//     static constexpr IssueError MissingValue{
-//         70, "Missing required value for \"{}\" key."
-//     };
-//     static constexpr IssueError NotAllowed{
-//         70, "\"{}\" key not allowed {}."
-//     };
-//     static constexpr IssueWarning NoKTXwriter{
-//         70, "No KTXwriter key. Writers are strongly urged to identify themselves via this."
-//     };
-// };
-//
+
+struct Metadata {
+    static constexpr IssueError TooManyEntry{
+        7001, "Invalid keyValueData. The number of key-value entries exceeds the maximum allowed.",
+        "The number of key-value entries exceeds the maximum allowed {}."
+    };
+    static constexpr IssueError NotEnoughDataForAnEntry{
+        7002, "Invalid keyValueData. Not enough data left in keyValueData to process another key-value entry",
+        "KeyValueData has {} byte unprocessed, but for a key value entry at least 6 byte is required (4 byte size + 1 byte key + 1 byte \\0)."
+    };
+    static constexpr IssueError KeyValuePairSizeTooBig{
+        7003, "Invalid keyAndValueByteLength. The value is bigger than the amount of bytes left in the keyValueData.",
+        "keyAndValueByteLength is {}, but the keyValueData only has {} byte left for the key-value pair."
+    };
+    static constexpr IssueError KeyValuePairSizeTooSmall{
+        7004, "Invalid keyAndValueByteLength. keyAndValueByteLength must be at least 2.",
+        "keyAndValueByteLength is {}, but it must be at least 2 (1 byte key + 1 byte \\0)."
+    };
+    static constexpr IssueError KeyMissingNullTerminator{
+        7005, "Invalid keyValueData entry is missing the NULL terminator. Every key-value entry must have a NULL terminator separating the key from the value.",
+        "The key-value entry \"{}\" is missing the NULL terminator, but every key-value entry must have a NULL terminator separating the key from the value."
+    };
+    static constexpr IssueError KeyForbiddenBOM{
+        7006, "Invalid key in keyValueData. Key cannot contain BOM.",
+        "The beginning of the key \"{}\" has forbidden BOM."
+    };
+    static constexpr IssueError KeyInvalidUTF8{
+        7007, "Invalid key in keyValueData. Key must be a valid UTF8 string.",
+        "Key is \"{}\", which contains an invalid UTF8 character at position: {}."
+    };
+
+    static constexpr IssueError SizesDontAddUp{
+        7008, "Invalid keyValueData. keyValueData.byteLength must add up to sum of the key-value entries with paddings.",
+        "The processed keyValueData length is {}, but keyValueData.byteLength is {}, but they must match."
+    };
+    static constexpr IssueError UnknownReservedKey{
+        7009, "Invalid key in keyValueData. Keys with \"KTX\" or \"ktx\" prefix are reserved.",
+        "The key is \"{}\", but its not recognized and every key with \"KTX\" or \"ktx\" prefix are reserved."
+    };
+    static constexpr IssueWarning CustomMetadata{
+        7010, "Custom key in keyValueData.",
+        "Custom key \"{}\" found in keyValueData."
+    };
+    static constexpr IssueError PaddingNotZero{
+        7011, "Invalid padding byte value. Every padding byte's value must be 0.",
+        "A padding byte value is {:d} {}, but it must be 0."
+    };
+
+    static constexpr IssueError OutOfOrder{
+        7012, "Invalid keyValueData. Key-value entries must be sorted by their key.",
+        "Key-value entries are not sorted, but they must be sorted by their key.",
+    };
+    static constexpr IssueError DuplicateKey{
+        7013, "Invalid keyValueData. Keys must be unique.",
+        "There is a duplicate key, but the keys must be unique."
+    };
+
+    static constexpr IssueError InvalidSizeKTXcubemapIncomplete{
+        70, "Invalid KTXcubemapIncomplete metadata. The size of the value must be 1 byte.",
+        "The size of KTXcubemapIncomplete value is {}, but it must be 1 byte."
+    };
+    static constexpr IssueError InvalidSizeKTXorientation{
+        70, "Invalid KTXorientation metadata. The size of the value must be 3 to 5 byte (including the NULL terminator).",
+        "The size of KTXorientation value is {}, but it must be 3 to 5 byte (including the NULL terminator)."
+    };
+    static constexpr IssueError InvalidSizeKTXglFormat{
+        70, "Invalid KTXglFormat metadata. The size of the value must be 12 byte.",
+        "The size of KTXglFormat value is {}, but it must be 12 byte."
+    };
+    static constexpr IssueError InvalidSizeKTXdxgiFormat{
+        70, "Invalid KTXdxgiFormat__ metadata. The size of the value must be 4 byte.",
+        "The size of KTXdxgiFormat__ value is {}, but it must be 4 byte."
+    };
+    static constexpr IssueError InvalidSizeKTXmetalPixelFormat{
+        70, "Invalid KTXmetalPixelFormat metadata. The size of the value must be 4 byte.",
+        "The size of KTXmetalPixelFormat value is {}, but it must be 4 byte."
+    };
+    static constexpr IssueError InvalidSizeKTXswizzle{
+        70, "Invalid KTXswizzle metadata. The size of the value must be 5 byte (including the NULL terminator).",
+        "The size of KTXswizzle value is {}, but it must be 5 byte (including the NULL terminator)."
+    };
+    static constexpr IssueError InvalidSizeKTXanimData{
+        70, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
+        "The size of KTXanimData value is {}, but it must be 12 byte."
+    };
+
+    static constexpr IssueError NoRequiredKTXwriter{
+        70, "Missing KTXwriter metadata. When KTXwriterScParams is present KTXwriter must also be present",
+        "KTXwriter metadata is missing. When KTXwriterScParams is present KTXwriter must also be present"
+    };
+    static constexpr IssueWarning NoKTXwriter{
+        70, "Missing KTXwriter metadata. Writers are strongly urged to identify themselves via this.",
+        "KTXwriter metadata is missing. Writers are strongly urged to identify themselves via this."
+    };
+
+    // static constexpr IssueError CubemapIncompleteInvalidValue{
+    //     70, "",
+    //     "{} has invalid value."
+    // };
+
+    // static constexpr IssueWarning ValueNotNulTerminated{
+    //     70, "{} value missing encouraged NUL termination."
+    // };
+    // static constexpr IssueError InvalidValue{
+    //     70, "{} has invalid value."
+    // };
+    // static constexpr IssueError MissingValue{
+    //     70, "Missing required value for \"{}\" key."
+    // };
+    // static constexpr IssueError NotAllowed{
+    //     70, "\"{}\" key not allowed {}."
+    // };
+};
+
 // struct SGD {
 //     static constexpr IssueError UnexpectedSupercompressionGlobalData{
 //         80, "Supercompression global data found scheme that is not Basis."

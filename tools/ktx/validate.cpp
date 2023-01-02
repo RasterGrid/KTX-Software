@@ -7,6 +7,7 @@
 #include <KHR/khr_df.h>
 #include <ktx.h>
 #include "ktxint.h"
+#include <stdexcept>
 
 #include "utility.h"
 #include "validate.h"
@@ -54,11 +55,28 @@ struct BDFD {
     SampleType samples[6];
 };
 
+// -------------------------------------------------------------------------------------------------
+
+class FatalValidationError : public std::runtime_error {
+public:
+    ValidationReport report;
+
+public:
+    explicit FatalValidationError(ValidationReport report) :
+        std::runtime_error(report.details),
+        report(std::move(report)) {}
+};
+
+// -------------------------------------------------------------------------------------------------
+
 struct ValidationContext {
 private:
-    const char* data = nullptr;
-    std::size_t size = 0;
-    const char* it = nullptr;
+    static constexpr uint32_t MAX_NUM_KV_ENTRY = 100;
+
+private:
+    const char* fileData = nullptr;
+    std::size_t fileSize = 0;
+    const char* fileIt = nullptr;
 
 private:
     std::function<void(const ValidationReport&)> callback;
@@ -84,6 +102,7 @@ public:
     }
 
 private:
+    // warning, error and fatal functions are only used for validation readability
     template <typename... Args>
     void warning(const IssueWarning& issue, Args&&... args) {
         if (treatWarningsAsError) {
@@ -112,11 +131,28 @@ private:
     }
 
 private:
-    void read(void* readDst, std::size_t readSize, std::string_view name) {
-        if (it + readSize >= data + size)
-            fatal(IOError::UnexpectedEOF, readSize, readSize - (data + size - it), name);
+    void seek_to(std::size_t target) {
+        // TODO Tools P5: Switch to a different seeking/reading pattern
+        assert(fileIt < fileData + target); // To ensure forward seeking only
+        fileIt = fileData + target;
+    }
 
-        std::memcpy(readDst, it, readSize);
+    void read(void* readDst, std::size_t readSize, std::string_view name) {
+        if (fileIt + readSize >= fileData + fileSize)
+            fatal(IOError::UnexpectedEOF, readSize, readSize - (fileData + fileSize - fileIt), name);
+
+        std::memcpy(readDst, fileIt, readSize);
+    }
+
+private:
+    template <typename... Args>
+    void validatePaddingZeros(const void* ptr, const void* bufferEnd, std::size_t alignment, const IssueError& issue, Args&&... args) {
+        const auto* begin = static_cast<const char*>(ptr);
+        const auto* end = std::min(bufferEnd, align(ptr, alignment));
+
+        for (auto it = begin; it != end; ++it)
+            if (*it != 0)
+                error(issue, *it, std::forward<Args>(args)...);
     }
 
 public:
@@ -128,7 +164,21 @@ private:
     int validate();
     void validateHeader();
     void validateIndices();
+    // void validateLevelIndex();
     // void validate...();
+    // void validateDFD();
+    void validateKVD();
+
+    void validateKVCubemapIncomplete(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVOrientation(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVGlFormat(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVDxgiFormat(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVMetalPixelFormat(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVSwizzle(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVWriter(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVWriterScParams(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVAstcDecodeMode(std::string_view key, const uint8_t* data, uint32_t size);
+    void validateKVAnimData(std::string_view key, const uint8_t* data, uint32_t size);
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -206,9 +256,9 @@ int ValidationContext::validateStream(FILE* file) {
 }
 
 int ValidationContext::validateMemory(const char* data_, std::size_t size_) {
-    data = data_;
-    size = size_;
-    it = data_;
+    fileData = data_;
+    fileSize = size_;
+    fileIt = data_;
     return validate();
 }
 
@@ -217,7 +267,17 @@ int ValidationContext::validateMemory(const char* data_, std::size_t size_) {
 int ValidationContext::validate() {
     validateHeader();
     validateIndices();
+    // parseDFD();
+    // validateLevelIndex();
     // validate...();
+    validateKVD();
+    // validate...();
+
+    // TODO Tools P3: Verify alignment (4) padding zeros between levelIndex and DFD
+    // TODO Tools P3: Verify alignment (4) padding zeros between DFD and KVD
+    // TODO Tools P3: Verify alignment (8) padding zeros between KVD and SGD
+    // TODO Tools P3: Verify alignment (?) padding zeros between SGD and image levels
+    // TODO Tools P3: Verify alignment (?) padding zeros between image levels
 
     return numError > 0 ? 3 : 0;
 }
@@ -236,12 +296,14 @@ void ValidationContext::validateHeader() {
     if (isProhibitedFormat(vkFormat))
         error(HeaderData::ProhibitedFormat, toStringVkFormat(vkFormat));
 
-    if (!isValidFormat(vkFormat)) {
-        if (header.vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM || header.vkFormat > 0x10010000)
-            error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
-        else
-            warning(HeaderData::UnknownFormat, toStringVkFormat(vkFormat));
-    }
+    if (vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM && !isValidFormat(vkFormat))
+        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+    if (VK_FORMAT_MAX_STANDARD_ENUM < vkFormat && vkFormat < 1000001000)
+        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+    if (1000001000 <= vkFormat && vkFormat < VK_FORMAT_MAX_ENUM)
+        warning(HeaderData::VendorFormat, toStringVkFormat(vkFormat));
+    if (VK_FORMAT_MAX_ENUM < vkFormat)
+        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
 
     if (header.supercompressionScheme == KTX_SS_BASIS_LZ) {
         if (header.vkFormat != VK_FORMAT_UNDEFINED)
@@ -327,7 +389,7 @@ void ValidationContext::validateHeader() {
     // Validate faceCount
     if (header.faceCount != 6 && header.faceCount != 1)
         error(HeaderData::InvalidFaceCount, header.faceCount);
-    // Cube map 2D faces are validated by: CubeHeightWidthMismatch and CubeWithDepth
+    // The fact that cube map faces are 2D is validated by: CubeHeightWidthMismatch and CubeWithDepth
 
     // Validate levelCount
     levelCount = std::max(header.levelCount, 1u);
@@ -352,56 +414,82 @@ void ValidationContext::validateHeader() {
 }
 
 void ValidationContext::validateIndices() {
-    // Validate indices
 
-    // TODO Tools P2: Validate indices
+    // Validate dataFormatDescriptor index
+    if (header.dataFormatDescriptor.byteOffset == 0)
+        error(HeaderData::IndexDFDZeroOffset);
 
-    // if (header.dataFormatDescriptor.byteOffset == 0 || header.dataFormatDescriptor.byteLength == 0)
-    //     error(HeaderData::InvalidRequiredIndexEntry, "dfd");
-    //
-    // if (header.keyValueData.byteOffset == 0 != header.keyValueData.byteLength == 0)
-    //     error(HeaderData::InvalidOptionalIndexEntry, "kvd");
-    //
-    // if (header.supercompressionScheme == KTX_SS_BASIS_LZ) {
-    //     if (header.supercompressionGlobalData.byteOffset == 0 || header.supercompressionGlobalData.byteLength == 0)
-    //         error(HeaderData::InvalidRequiredIndexEntry, "sgd");
-    // } else {
-    //     if (header.supercompressionGlobalData.byteOffset == 0 != header.supercompressionGlobalData.byteLength == 0)
-    //         error(HeaderData::InvalidOptionalIndexEntry, "sgd");
-    // }
-    //
-    // levelIndexSize = sizeof(ktxLevelIndexEntry) * levelCount;
-    // uint64_t offset = KTX2_HEADER_SIZE + levelIndexSize;
-    // if (offset != header.dataFormatDescriptor.byteOffset)
-    //     error(HeaderData::InvalidDFDOffset);
-    // offset += header.dataFormatDescriptor.byteLength;
-    //
-    // if (header.keyValueData.byteOffset != 0) {
-    //     if (offset != header.keyValueData.byteOffset)
-    //         error(HeaderData::InvalidKVDOffset);
-    //     offset += header.keyValueData.byteLength;
-    //     if (header.supercompressionGlobalData.byteOffset != 0)
-    //         // Pad before SGD.
-    //         offset = padn(8, offset);
-    // }
-    //
-    // if (header.supercompressionGlobalData.byteOffset != 0)
-    //     if (offset != header.supercompressionGlobalData.byteOffset)
-    //         error(HeaderData::InvalidSGDOffset);
+    if (header.dataFormatDescriptor.byteOffset % 4 != 0)
+        error(HeaderData::IndexDFDAlignment, header.dataFormatDescriptor.byteOffset);
+
+    if (header.dataFormatDescriptor.byteLength == 0)
+        error(HeaderData::IndexDFDZeroLength);
+
+    if (header.dataFormatDescriptor.byteOffset + header.dataFormatDescriptor.byteLength > fileSize)
+        error(HeaderData::IndexDFDInvalid, header.dataFormatDescriptor.byteOffset, header.dataFormatDescriptor.byteLength, fileSize);
+
+    // Validate keyValueData index
+    if (header.keyValueData.byteLength == 0)
+        if (header.keyValueData.byteOffset != 0)
+            error(HeaderData::IndexKVDOffsetWithoutLength, header.keyValueData.byteOffset);
+
+    if (header.keyValueData.byteOffset % 4 != 0)
+        error(HeaderData::IndexKVDAlignment, header.keyValueData.byteOffset);
+
+    if (header.keyValueData.byteOffset + header.keyValueData.byteLength > fileSize)
+        error(HeaderData::IndexKVDInvalid, header.keyValueData.byteOffset, header.keyValueData.byteLength, fileSize);
+
+    // Validate supercompressionGlobalData index
+    if (header.supercompressionGlobalData.byteLength == 0)
+        if (header.supercompressionGlobalData.byteOffset != 0)
+            error(HeaderData::IndexSGDOffsetWithoutLength, header.supercompressionGlobalData.byteOffset);
+
+    if (header.supercompressionGlobalData.byteOffset % 8 != 0)
+        error(HeaderData::IndexSGDAlignment, header.supercompressionGlobalData.byteOffset);
+
+    if (isSupercompressionWithGlobalData(static_cast<ktxSupercmpScheme>(header.supercompressionScheme))) {
+        if (header.supercompressionGlobalData.byteLength == 0)
+            error(HeaderData::IndexSGDMissing, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
+    } else {
+        if (header.supercompressionGlobalData.byteLength != 0)
+            error(HeaderData::IndexSGDExists, header.supercompressionGlobalData.byteLength, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
+    }
+
+    if (header.supercompressionGlobalData.byteOffset + header.supercompressionGlobalData.byteLength > fileSize)
+        error(HeaderData::IndexSGDInvalid, header.supercompressionGlobalData.byteOffset, header.supercompressionGlobalData.byteLength, fileSize);
+
+    // Validate region positioning and continuity
+    const auto levelIndexSize = sizeof(ktxLevelIndexEntry) * levelCount;
+    std::size_t expectedOffset = KTX2_HEADER_SIZE + levelIndexSize;
+
+    expectedOffset = align(expectedOffset, std::size_t{4});
+    if (expectedOffset != header.dataFormatDescriptor.byteOffset)
+        error(HeaderData::IndexDFDContinuity, header.dataFormatDescriptor.byteOffset, expectedOffset);
+    expectedOffset += header.dataFormatDescriptor.byteLength;
+
+    if (header.keyValueData.byteLength != 0) {
+        expectedOffset = align(expectedOffset, std::size_t{4});
+        if (expectedOffset != header.keyValueData.byteOffset)
+            error(HeaderData::IndexKVDContinuity, header.keyValueData.byteOffset, expectedOffset);
+        expectedOffset += header.keyValueData.byteLength;
+    }
+
+    if (header.supercompressionGlobalData.byteLength != 0) {
+        expectedOffset = align(expectedOffset, std::size_t{8});
+        if (expectedOffset != header.supercompressionGlobalData.byteOffset)
+            error(HeaderData::IndexSGDContinuity, header.supercompressionGlobalData.byteOffset, expectedOffset);
+        expectedOffset += header.supercompressionGlobalData.byteLength;
+    }
 }
 
 // =================================================================================================
-// TODO Tools P2: Validate the rest of the file
-
-// void
-// ktxValidator::validateLevelIndex(validationContext& ctx)
-// {
-//     ktxLevelIndexEntry* levelIndex = new ktxLevelIndexEntry[ctx.levelCount];
-//     ctx.inp->read((char *)levelIndex, ctx.levelIndexSize);
-//     if (ctx.inp->fail())
-//         addIssue(logger::eFatal, IOError.FileRead, strerror(errno));
-//     else if (ctx.inp->eof())
-//         addIssue(logger::eFatal, IOError.UnexpectedEOF);
+// TODO Tools P2: Validate Level Index
+//
+// void ValidationContext::validateLevelIndex() {
+//     std::vector<ktxLevelIndexEntry> levelIndices(levelCount);
+//
+//     const auto levelIndexSize = sizeof(ktxLevelIndexEntry) * levelCount;
+//     read(levelIndices.data(), levelIndexSize, "the level index");
 //
 //     validateDfd(ctx);
 //     if (!ctx.pDfd4Format) {
@@ -414,96 +502,97 @@ void ValidationContext::validateIndices() {
 //     }
 //
 //     uint32_t requiredLevelAlignment = ctx.requiredLevelAlignment();
-//     size_t expectedOffset = 0;
-//     size_t lastByteLength = 0;
-//     switch (ctx.header.supercompressionScheme) {
-//       case KTX_SS_NONE:
-//       case KTX_SS_ZSTD:
-//         expectedOffset = padn(requiredLevelAlignment, ctx.kvDataEndOffset());
-//         break;
-//       case KTX_SS_BASIS_LZ:
-//         ktxIndexEntry64 sgdIndex = ctx.header.supercompressionGlobalData;
-//         // No padding here.
-//         expectedOffset = sgdIndex.byteOffset + sgdIndex.byteLength;
-//         break;
-//     }
-//     expectedOffset = padn(requiredLevelAlignment, expectedOffset);
-//     // Last mip level is first in the file. Count down so we can check the
+//     // size_t expectedOffset = 0;
+//     // size_t lastByteLength = 0;
+//     //
+//     // switch (ctx.header.supercompressionScheme) {
+//     //   case KTX_SS_NONE:
+//     //   case KTX_SS_ZSTD:
+//     //     expectedOffset = padn(requiredLevelAlignment, ctx.kvDataEndOffset());
+//     //     break;
+//     //   case KTX_SS_BASIS_LZ:
+//     //     ktxIndexEntry64 sgdIndex = ctx.header.supercompressionGlobalData;
+//     //     // No padding here.
+//     //     expectedOffset = sgdIndex.byteOffset + sgdIndex.byteLength;
+//     //     break;
+//     // }
+//     //
+//     // expectedOffset = padn(requiredLevelAlignment, expectedOffset);
+//
+//     // Last mip level is first in the file. Count down, so we can check the
 //     // distance between levels for the UNDEFINED and SUPERCOMPRESSION cases.
-//     for (int32_t level = ctx.levelCount-1; level >= 0; level--) {
-//         if (ctx.header.vkFormat != VK_FORMAT_UNDEFINED
-//             && ctx.header.supercompressionScheme == KTX_SS_NONE) {
-//             ktx_size_t actualUBL = levelIndex[level].uncompressedByteLength;
+//     for (int32_t levelIt = static_cast<int32_t>(levelCount) - 1; levelIt >= 0; --levelIt) {
+//         const auto& level = levelIndices[static_cast<std::size_t>(levelIt)];
+//
+//         const auto knownLevelSizes =
+//                 header.vkFormat != VK_FORMAT_UNDEFINED &&
+//                 header.supercompressionScheme == KTX_SS_NONE;
+//
+//         if (knownLevelSizes) {
 //             ktx_size_t expectedUBL = ctx.calcLevelSize(level);
-//             if (actualUBL != expectedUBL)
-//                 addIssue(logger::eError,
-//                          LevelIndex.IncorrectUncompressedByteLength,
-//                          level, actualUBL, expectedUBL);
+//             if (level.uncompressedByteLength != expectedUBL)
+//                 error(LevelIndex::IncorrectUncompressedByteLength, level, level.uncompressedByteLength, expectedUBL);
 //
-//             if (levelIndex[level].byteLength !=
-//                 levelIndex[level].uncompressedByteLength)
-//                 addIssue(logger::eError, LevelIndex.UnequalByteLengths, level);
+//             if (level.byteLength != level.uncompressedByteLength)
+//                 error(LevelIndex::UnequalByteLengths, level);
 //
-//             ktx_size_t expectedByteOffset = ctx.calcLevelOffset(level);
-//             ktx_size_t actualByteOffset = levelIndex[level].byteOffset;
-//             if (actualByteOffset != expectedByteOffset) {
-//                 if (actualByteOffset % requiredLevelAlignment != 0)
-//                     addIssue(logger::eError, LevelIndex.UnalignedOffset,
-//                              level, requiredLevelAlignment);
-//                 if (levelIndex[level].byteOffset > expectedByteOffset)
-//                     addIssue(logger::eError, LevelIndex.ExtraPadding, level);
+//             ktx_size_t expectedOffset = ctx.calcLevelOffset(level);
+//             if (level.byteOffset != expectedOffset) {
+//                 if (level.byteOffset % requiredLevelAlignment != 0)
+//                     error(LevelIndex::UnalignedOffset, level, requiredLevelAlignment);
+//
+//                 if (level.byteOffset > expectedOffset)
+//                     error(LevelIndex::ExtraPadding, level);
+//
 //                 else
-//                     addIssue(logger::eError, LevelIndex.ByteOffsetTooSmall,
-//                              level, actualByteOffset, expectedByteOffset);
+//                     error(LevelIndex::ByteOffsetTooSmall, level, level.byteOffset, expectedOffset);
 //             }
+//
 //         } else {
 //             // Can only do minimal validation as we have no idea what the
-//             // level sizes are so we have to trust the byteLengths. We do
-//             // at least know where the first level must be in the file and
+//             // level sizes are, so we have to trust the byteLengths. We do
+//             // at least know where the first level must be in the file, and
 //             // we can calculate how much padding, if any, there must be
 //             // between levels.
-//             if (levelIndex[level].byteLength == 0
-//                 || levelIndex[level].byteOffset == 0) {
-//                  addIssue(logger::eError, LevelIndex.ZeroOffsetOrLength, level);
-//                  continue;
-//             }
-//             if (levelIndex[level].byteOffset != expectedOffset) {
-//                 addIssue(logger::eError,
-//                          LevelIndex.IncorrectByteOffset,
-//                          level, levelIndex[level].byteOffset, expectedOffset);
-//             }
-//             if (ctx.header.supercompressionScheme == KTX_SS_NONE) {
-//                 if (levelIndex[level].byteLength < lastByteLength)
-//                     addIssue(logger.eError, LevelIndex.IncorrectLevelOrder);
-//                 if (levelIndex[level].byteOffset % requiredLevelAlignment != 0)
-//                     addIssue(logger::eError, LevelIndex.UnalignedOffset,
-//                              level, requiredLevelAlignment);
-//                 if (levelIndex[level].uncompressedByteLength == 0) {
-//                     addIssue(logger::eError, LevelIndex.ZeroUncompressedLength,
-//                              level);
-//                 }
-//                 lastByteLength = levelIndex[level].byteLength;
-//             }
-//             expectedOffset += padn(requiredLevelAlignment,
-//                                    levelIndex[level].byteLength);
-//             if (ctx.header.vkFormat != VK_FORMAT_UNDEFINED) {
-//                 // We can validate the uncompressedByteLength.
-//                 ktx_size_t actualUBL = levelIndex[level].uncompressedByteLength;
-//                 ktx_size_t expectedUBL = ctx.calcLevelSize(level);
-//                 if (actualUBL != expectedUBL)
-//                     addIssue(logger::eError,
-//                              LevelIndex.IncorrectUncompressedByteLength,
-//                              level, actualUBL, expectedUBL);
-//             }
+//             // if (level.byteLength == 0 || level.byteOffset == 0) {
+//             //      error(LevelIndex::ZeroOffsetOrLength, level);
+//             //      continue;
+//             // }
+//             //
+//             // if (level.byteOffset != expectedOffset) {
+//             //     error(LevelIndex::IncorrectByteOffset, level, level.byteOffset, expectedOffset);
+//             // }
+//             //
+//             // if (header.supercompressionScheme == KTX_SS_NONE) {
+//             //     if (level.byteLength < lastByteLength)
+//             //         addIssue(logger.eError, LevelIndex::IncorrectLevelOrder);
+//             //     if (level.byteOffset % requiredLevelAlignment != 0)
+//             //         error(LevelIndex::UnalignedOffset, level, requiredLevelAlignment);
+//             //     if (level.uncompressedByteLength == 0) {
+//             //         error(LevelIndex::ZeroUncompressedLength, level);
+//             //     }
+//             //     lastByteLength = level.byteLength;
+//             // }
+//             //
+//             // expectedOffset += padn(requiredLevelAlignment, level.byteLength);
+//             // if (header.vkFormat != VK_FORMAT_UNDEFINED) {
+//             //     // We can validate the uncompressedByteLength.
+//             //     ktx_size_t level.uncompressedByteLength = level.uncompressedByteLength;
+//             //     ktx_size_t expectedUBL = ctx.calcLevelSize(level);
+//             //
+//             //     if (level.uncompressedByteLength != expectedUBL)
+//             //         error(LevelIndex::IncorrectUncompressedByteLength, level, level.uncompressedByteLength, expectedUBL);
+//             // }
 //         }
-//         ctx.dataSizeFromLevelIndex += padn(ctx.requiredLevelAlignment(),
-//                                            levelIndex[level].byteLength);
+//
+//         // ctx.dataSizeFromLevelIndex += padn(ctx.requiredLevelAlignment(), level.byteLength);
 //     }
-//     delete[] levelIndex;
 // }
 //
-// void
-// ktxValidator::validateDfd(validationContext& ctx)
+// =================================================================================================
+// TODO Tools P2: Validate DFD
+//
+// void ktxValidator::validateDfd(validationContext& ctx)
 // {
 //     if (ctx.header.dataFormatDescriptor.byteLength == 0)
 //         return;
@@ -784,308 +873,307 @@ void ValidationContext::validateIndices() {
 //     }
 // }
 //
-// void
-// ktxValidator::validateKvd(validationContext& ctx)
-// {
-//     uint32_t kvdLen = ctx.header.keyValueData.byteLength;
-//     uint32_t lengthCheck = 0;
-//     bool allKeysNulTerminated = true;
-//
-//     if (kvdLen == 0)
-//         return;
-//
-//     uint8_t* kvd = new uint8_t[kvdLen];
-//     ctx.inp->read((char *)kvd, kvdLen);
-//     if (ctx.inp->fail())
-//         addIssue(logger::eFatal, IOError.FileRead, strerror(errno));
-//     else if (ctx.inp->eof())
-//         addIssue(logger::eFatal, IOError.UnexpectedEOF);
-//
-//     // Check all kv pairs have valuePadding and it's included in kvdLen;
-//     uint8_t* pCurKv = kvd;
-//     uint32_t safetyCount;
-//     // safetyCount ensures we don't get stuck in an infinite loop in the event
-//     // the kv data is completely bogus and the "lengths" never add up to kvdLen.
-// #define MAX_KVPAIRS 75
-//     for (safetyCount = 0; lengthCheck < kvdLen && safetyCount < MAX_KVPAIRS; safetyCount++) {
-//         uint32_t curKvLen = *(uint32_t *)pCurKv;
-//         lengthCheck += sizeof(uint32_t); // Add keyAndValueByteLength to total.
-//         pCurKv += sizeof(uint32_t); // Move pointer past keyAndValueByteLength.
-//         uint8_t* p = pCurKv;
-//         uint8_t* pCurKvEnd = pCurKv + curKvLen;
-//
-//         // Check for BOM.
-//         bool bom = false;
-//         if (*p == 0xEF && *(p+1) == 0xBB && *(p+2) == 0xBF) {
-//             bom = true;
-//             p += 3;
-//         }
-//         for (; p < pCurKvEnd; p++) {
-//             if (*p == '\0')
-//               break;
-//         }
-//         bool noNul = (p == pCurKvEnd);
-//         if (noNul) {
-//             addIssue(logger::eError, Metadata.MissingNulTerminator, pCurKv);
-//             allKeysNulTerminated = false;
-//         }
-//         if (bom) {
-//             if (noNul)
-//                 addIssue(logger::eError, Metadata.ForbiddenBOM1, pCurKv);
-//             else
-//                 addIssue(logger::eError, Metadata.ForbiddenBOM2, pCurKv);
-//         }
-//         curKvLen = (uint32_t)padn(4, curKvLen);
-//         lengthCheck += curKvLen;
-//         pCurKv += curKvLen;
-//     }
-//     if (safetyCount == 75)
-//         addIssue(logger::eError, Metadata.InvalidStructure, MAX_KVPAIRS);
-//     else if (lengthCheck != kvdLen)
-//         addIssue(logger::eError, Metadata.MissingFinalPadding);
-//
-//     ktxHashList kvDataHead = 0;
-//     ktxHashListEntry* entry;
-//     char* prevKey;
-//     uint32_t prevKeyLen;
-//     KTX_error_code result;
-//     bool writerFound = false;
-//     bool writerScParamsFound = false;
-//
-//     if (allKeysNulTerminated) {
-//         result = ktxHashList_Deserialize(&kvDataHead, kvdLen, kvd);
-//         if (result != KTX_SUCCESS) {
-//             addIssue(logger::eError, System.OutOfMemory);
-//             return;
-//         }
-//
-//         // Check the entries are sorted
-//         ktxHashListEntry_GetKey(kvDataHead, &prevKeyLen, &prevKey);
-//         entry = ktxHashList_Next(kvDataHead);
-//         for (; entry != NULL; entry = ktxHashList_Next(entry)) {
-//             uint32_t keyLen;
-//             char* key;
-//
-//             ktxHashListEntry_GetKey(entry, &keyLen, &key);
-//             if (strcmp(prevKey, key) > 0) {
-//                 addIssue(logger::eError, Metadata.OutOfOrder);
-//                 break;
-//             }
-//         }
-//
-//         for (entry = kvDataHead; entry != NULL; entry = ktxHashList_Next(entry)) {
-//             uint32_t keyLen, valueLen;
-//             char* key;
-//             uint8_t* value;
-//
-//             ktxHashListEntry_GetKey(entry, &keyLen, &key);
-//             ktxHashListEntry_GetValue(entry, &valueLen, (void**)&value);
-//             if (strncasecmp(key, "KTX", 3) == 0) {
-//                 if (!validateMetadata(ctx, key, value, valueLen)) {
-//                     addIssue(logger::eError, Metadata.IllegalMetadata, key);
-//                 }
-//                 if (strncmp(key, "KTXwriter", 9) == 0)
-//                     writerFound = true;
-//                 if (strncmp(key, "KTXwriterScParams", 17) == 0)
-//                     writerScParamsFound = true;
-//             } else {
-//                 addIssue(logger::eWarning, Metadata.CustomMetadata, key);
-//             }
-//         }
-//         if (!writerFound) {
-//             if (writerScParamsFound)
-//                 addIssue(logger::eError, Metadata.NoRequiredKTXwriter);
-//             else
-//                 addIssue(logger::eWarning, Metadata.NoKTXwriter);
-//         }
-//     }
-// }
-//
-// bool
-// ktxValidator::validateMetadata(validationContext& ctx, const char* key,
-//                                const uint8_t* pValue, uint32_t valueLen)
-// {
-// #define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))
-//     vector<metadataValidator>::const_iterator it;
-//
-//     for (it = metadataValidators.begin(); it < metadataValidators.end(); it++) {
-//         if (!it->name.compare(key)) {
-//             //validateMetadataFunc vf = it->validateFunc;
-//             CALL_MEMBER_FN(this, it->validateFunc)(ctx, key, pValue, valueLen);
-//             break;
-//         }
-//     }
-//     if (it == metadataValidators.end())
-//         return false; // Unknown KTX-prefixed and therefore illegal metadata.
-//     else
-//         return true;
-// }
-//
-// void
-// ktxValidator::validateCubemapIncomplete(validationContext& ctx,
-//                                         const char* key,
-//                                         const uint8_t*,
-//                                         uint32_t valueLen)
-// {
-//     ctx.cubemapIncompleteFound = true;
-//     if (valueLen != 1)
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-// }
-//
-// void
-// ktxValidator::validateOrientation(validationContext& ctx,
-//                                   const char* key,
-//                                   const uint8_t* value,
-//                                   uint32_t valueLen)
-// {
-//     if (valueLen == 0) {
-//         addIssue(logger::eError, Metadata.MissingValue, key);
-//         return;
-//     }
-//
-//     string orientation;
-//     const char* pOrientation = reinterpret_cast<const char*>(value);
-//     if (value[valueLen - 1] != '\0') {
-//         // regex_match on some platforms will fail to match an otherwise
-//         // valid swizzle due to lack of a NUL terminator even IF there is
-//         // no '$' at the end of the regex. Make a copy to avoid this.
-//         orientation.assign(pOrientation, valueLen);
-//         pOrientation = orientation.c_str();
-//         addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-//     }
-//
-//     if (valueLen != ctx.dimensionCount + 1)
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-//
-//     switch (ctx.dimensionCount) {
-//       case 1:
-//         if (!regex_match (pOrientation, regex("^[rl]$") ))
-//             addIssue(logger::eError, Metadata.InvalidValue, key);
-//         break;
-//       case 2:
-//         if (!regex_match(pOrientation, regex("^[rl][du]$")))
-//             addIssue(logger::eError, Metadata.InvalidValue, key);
-//         break;
-//       case 3:
-//         if (!regex_match(pOrientation, regex("^[rl][du][oi]$")))
-//             addIssue(logger::eError, Metadata.InvalidValue, key);
-//         break;
-//     }
-// }
-//
-// void
-// ktxValidator::validateGlFormat(validationContext& /*ctx*/,
-//                                const char* key,
-//                                const uint8_t* /*value*/,
-//                                uint32_t valueLen)
-// {
-//     if (valueLen != sizeof(uint32_t) * 3)
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-// }
-//
-// void
-// ktxValidator::validateDxgiFormat(validationContext& /*ctx*/,
-//                                  const char* key,
-//                                  const uint8_t* /*value*/,
-//                                  uint32_t valueLen)
-//                             {
-//     if (valueLen != sizeof(uint32_t))
-//         addIssue(logger::eError, Metadata.InvalidValue, key);}
-//
-// void
-// ktxValidator::validateMetalPixelFormat(validationContext& /*ctx*/,
-//                                        const char* key,
-//                                        const uint8_t* /*value*/,
-//                                        uint32_t valueLen)
-// {
-//     if (valueLen != sizeof(uint32_t))
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-// }
-//
-// void
-// ktxValidator::validateSwizzle(validationContext& /*ctx*/,
-//                               const char* key,
-//                               const uint8_t* value,
-//                               uint32_t valueLen)
-// {
-//     string swizzle;
-//     const char* pSwizzle = reinterpret_cast<const char*>(value);
-//     if (value[valueLen - 1] != '\0') {
-//         addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-//         // See comment in validateOrientation.
-//         swizzle.assign(pSwizzle, valueLen);
-//         pSwizzle = swizzle.c_str();
-//     }
-//     if (!regex_match(pSwizzle, regex("^[rgba01]{4}$")))
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-// }
-//
-// void
-// ktxValidator::validateWriter(validationContext& /*ctx*/,
-//                              const char* key,
-//                              const uint8_t* value,
-//                              uint32_t valueLen)
-// {
-//     if (value[valueLen-1] != '\0')
-//         addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-// }
-//
-// void
-// ktxValidator::validateWriterScParams(validationContext& /*ctx*/,
-//                                      const char* key,
-//                                      const uint8_t* value,
-//                                      uint32_t valueLen)
-// {
-//     if (value[valueLen-1] != '\0')
-//         addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-// }
-//
-// void
-// ktxValidator::validateAstcDecodeMode(validationContext& ctx,
-//                                      const char* key,
-//                                      const uint8_t* value,
-//                                      uint32_t valueLen)
-// {
-//     if (valueLen == 0) {
-//         addIssue(logger::eError, Metadata.MissingValue, key);
-//         return;
-//     }
-//
-//     if (!regex_match((char*)value, regex("rgb9e5"))
-//        && !regex_match((char*)value, regex("unorm8")))
-//          addIssue(logger::eError, Metadata.InvalidValue, key);
-//
-//     if (!ctx.pActualDfd)
-//         return;
-//
-//     uint32_t* bdb = ctx.pDfd4Format + 1;
-//     if (KHR_DFDVAL(bdb, MODEL) != KHR_DF_MODEL_ASTC) {
-//          addIssue(logger::eError, Metadata.NotAllowed, key,
-//                   "for non-ASTC texture formats");
-//     }
-//     if (KHR_DFDVAL(bdb, TRANSFER) == KHR_DF_TRANSFER_SRGB) {
-//          addIssue(logger::eError, Metadata.NotAllowed, key,
-//                   "with sRGB transfer function");
-//     }
-// }
-//
-// void
-// ktxValidator::validateAnimData(validationContext& ctx,
-//                                const char* key,
-//                                const uint8_t* /*value*/,
-//                                uint32_t valueLen)
-// {
-//     if (ctx.cubemapIncompleteFound) {
-//          addIssue(logger::eError, Metadata.NotAllowed, key,
-//                   "together with KTXcubemapIncomplete");
-//     }
-//     if (ctx.layerCount == 0)
-//         addIssue(logger::eError, Metadata.NotAllowed, key,
-//                  "except with array textures");
-//
-//     if (valueLen != sizeof(uint32_t) * 3)
-//         addIssue(logger::eError, Metadata.InvalidValue, key);
-// }
+// =================================================================================================
+
+void ValidationContext::validateKVD() {
+    seek_to(header.keyValueData.byteOffset);
+
+    if (header.keyValueData.byteLength == 0)
+        return; // There is no KVD block
+
+    const auto buffer = std::make_unique<uint8_t[]>(header.keyValueData.byteLength);
+    read(buffer.get(), header.keyValueData.byteLength, "the KVD");
+    const auto* ptrKVD = buffer.get();
+    const auto* ptrKVDEnd = ptrKVD + header.keyValueData.byteLength;
+
+    struct KeyValueEntry {
+        std::string key;
+        const uint8_t* data;
+        uint32_t size;
+
+        KeyValueEntry(std::string_view key, const uint8_t* data, uint32_t size) :
+                key(key), data(data), size(size) {}
+    };
+    std::vector<KeyValueEntry> entries;
+
+    int numEntry = 0;
+    // Process Key-Value entries {size, key, \0, value} until the end of the KVD block
+    // Where size is an uint32_t, and it equals to: sizeof(key) + 1 + sizeof(value)
+    const auto* ptrEntry = ptrKVD;
+    while (ptrEntry < ptrKVDEnd) {
+        ++numEntry;
+        if (numEntry > MAX_NUM_KV_ENTRY) {
+            error(Metadata::TooManyEntry, MAX_NUM_KV_ENTRY);
+            break;
+        }
+
+        if (ptrKVDEnd - ptrEntry < 6) {
+            error(Metadata::NotEnoughDataForAnEntry, ptrKVDEnd - ptrEntry);
+            // The spec requires at least 6 byte per entry, but this validator is able to proceed with only 4
+            // 4 byte size + 1 byte key + 1 byte \0
+            if (ptrKVDEnd - ptrEntry < 4)
+                break;
+        }
+
+        uint32_t sizeKeyValuePair;
+        std::memcpy(&sizeKeyValuePair, ptrEntry, sizeof(uint32_t));
+
+        const auto* ptrKeyValuePair = ptrEntry + sizeof(uint32_t);
+        const auto* ptrKey = ptrKeyValuePair;
+
+        if (ptrKeyValuePair + sizeKeyValuePair >= ptrKVDEnd) {
+            const auto bytesLeft = ptrKVDEnd - ptrKeyValuePair;
+            error(Metadata::KeyValuePairSizeTooBig, sizeKeyValuePair, bytesLeft);
+            sizeKeyValuePair = static_cast<uint32_t>(bytesLeft); // Attempt recovery to read out at least the key
+        }
+
+        if (sizeKeyValuePair < 2)
+            error(Metadata::KeyValuePairSizeTooSmall, sizeKeyValuePair);
+
+        // Determine key, finding the null terminator
+        uint32_t sizeKey = 0;
+        while (sizeKey < sizeKeyValuePair && ptrKey[sizeKey] != '\0')
+            ++sizeKey;
+
+        const auto keyHasNullTerminator = sizeKey != sizeKeyValuePair;
+        auto key = std::string_view(reinterpret_cast<const char*>(ptrKey), sizeKey);
+
+        // Determine the value
+        const auto* ptrValue = ptrKey + sizeKey + 1;
+        const auto sizeValue = keyHasNullTerminator ? sizeKeyValuePair - sizeKey - 1 : 0;
+
+        // Check for BOM
+        if (starts_with(key, "\xEF\xBB\xBF")) {
+            key.remove_prefix(3);
+            error(Metadata::KeyForbiddenBOM, key);
+        }
+
+        if (auto invalidIndex = validateUTF8(key))
+            error(Metadata::KeyInvalidUTF8, key, *invalidIndex);
+
+        if (!keyHasNullTerminator)
+            error(Metadata::KeyMissingNullTerminator, key);
+
+        entries.emplace_back(key, ptrValue, sizeValue);
+
+        // Finish entry
+        ptrEntry += sizeof(uint32_t) + sizeKeyValuePair;
+        validatePaddingZeros(ptrEntry, ptrKVDEnd, 4, Metadata::PaddingNotZero, "after a Key-Value entry");
+        ptrEntry = align(ptrEntry, 4);
+    }
+
+    if (ptrEntry != ptrKVDEnd)
+        // Being super explicit about the specs. This check might be overkill as other checks often cover this case
+        error(Metadata::SizesDontAddUp, ptrEntry - ptrKVD, header.keyValueData.byteLength);
+
+    if (header.supercompressionGlobalData.byteLength != 0)
+        validatePaddingZeros(ptrEntry, ptrKVDEnd, 8, Metadata::PaddingNotZero, "between KVD and SGD");
+
+    if (!is_sorted(entries, std::less<>{}, &KeyValueEntry::key)) {
+        error(Metadata::OutOfOrder);
+        sort(entries, std::less<>{}, &KeyValueEntry::key);
+    }
+
+    if (!is_unique(entries, &KeyValueEntry::key))
+        error(Metadata::DuplicateKey);
+
+    using MemberFN = void(ValidationContext::*)(std::string_view, const uint8_t*, uint32_t);
+    std::unordered_map<std::string, MemberFN> kvValidators;
+
+    kvValidators.emplace("KTXcubemapIncomplete", &ValidationContext::validateKVCubemapIncomplete);
+    kvValidators.emplace("KTXorientation", &ValidationContext::validateKVOrientation);
+    kvValidators.emplace("KTXglFormat", &ValidationContext::validateKVGlFormat);
+    kvValidators.emplace("KTXdxgiFormat__", &ValidationContext::validateKVDxgiFormat);
+    kvValidators.emplace("KTXmetalPixelFormat", &ValidationContext::validateKVMetalPixelFormat);
+    kvValidators.emplace("KTXswizzle", &ValidationContext::validateKVSwizzle);
+    kvValidators.emplace("KTXwriter", &ValidationContext::validateKVWriter);
+    kvValidators.emplace("KTXwriterScParams", &ValidationContext::validateKVWriterScParams);
+    kvValidators.emplace("KTXastcDecodeMode", &ValidationContext::validateKVAstcDecodeMode);
+    kvValidators.emplace("KTXanimData", &ValidationContext::validateKVAnimData);
+
+    bool foundKTXwriter = false;
+    bool foundKTXwriterScParams = false;
+
+    for (const auto& entry : entries) {
+        if (entry.key == "KTXwriter")
+            foundKTXwriter = true;
+        if (entry.key == "KTXwriterScParams")
+            foundKTXwriterScParams = true;
+
+        const auto it = kvValidators.find(entry.key);
+        if (it == kvValidators.end()) {
+            if (starts_with(entry.key, "KTX") || starts_with(entry.key, "ktx"))
+                error(Metadata::UnknownReservedKey, entry.key);
+            else
+                warning(Metadata::CustomMetadata, entry.key);
+
+            continue;
+        }
+
+        (this->*it->second)(entry.key, entry.data, entry.size);
+    }
+
+    if (!foundKTXwriter) {
+        if (foundKTXwriterScParams)
+            error(Metadata::NoRequiredKTXwriter);
+        else
+            warning(Metadata::NoKTXwriter);
+    }
+}
+
+void ValidationContext::validateKVCubemapIncomplete(std::string_view key, const uint8_t* data, uint32_t size) {
+    // cubemapIncomplete must be checked before animData.
+    // cubemapIncompleteFound = true;
+
+    if (size != 1)
+        error(Metadata::InvalidSizeKTXcubemapIncomplete, size);
+
+    (void) key;
+    (void) data;
+    // if (size > 0 && (*data & 0b11000000u) != 0)
+    //     error(Metadata::CubemapIncompleteInvalidValue, *data);
+}
+
+void ValidationContext::validateKVOrientation(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size < 3 || size > 5) {
+        error(Metadata::InvalidSizeKTXorientation, size);
+        return;
+    }
+
+    (void) key;
+    (void) data;
+    // string orientation;
+    // const char* pOrientation = reinterpret_cast<const char*>(value);
+    // if (value[valueLen - 1] != '\0') {
+    //     // regex_match on some platforms will fail to match an otherwise
+    //     // valid swizzle due to lack of a NUL terminator even IF there is
+    //     // no '$' at the end of the regex. Make a copy to avoid this.
+    //     orientation.assign(pOrientation, valueLen);
+    //     pOrientation = orientation.c_str();
+    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+    // }
+    //
+    // if (valueLen != ctx.dimensionCount + 1)
+    //     addIssue(logger::eError, Metadata.InvalidValue, key);
+    //
+    // switch (ctx.dimensionCount) {
+    //   case 1:
+    //     if (!regex_match (pOrientation, regex("^[rl]$") ))
+    //         addIssue(logger::eError, Metadata.InvalidValue, key);
+    //     break;
+    //   case 2:
+    //     if (!regex_match(pOrientation, regex("^[rl][du]$")))
+    //         addIssue(logger::eError, Metadata.InvalidValue, key);
+    //     break;
+    //   case 3:
+    //     if (!regex_match(pOrientation, regex("^[rl][du][oi]$")))
+    //         addIssue(logger::eError, Metadata.InvalidValue, key);
+    //     break;
+    // }
+}
+
+void ValidationContext::validateKVGlFormat(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size != 12)
+        error(Metadata::InvalidSizeKTXglFormat, size);
+
+    (void) key;
+    (void) data;
+}
+
+void ValidationContext::validateKVDxgiFormat(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size != 4)
+        error(Metadata::InvalidSizeKTXdxgiFormat, size);
+
+    (void) key;
+    (void) data;
+}
+
+void ValidationContext::validateKVMetalPixelFormat(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size != 4)
+        error(Metadata::InvalidSizeKTXmetalPixelFormat, size);
+
+    (void) key;
+    (void) data;
+}
+
+void ValidationContext::validateKVSwizzle(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size != 5)
+        error(Metadata::InvalidSizeKTXswizzle, size);
+
+    (void) key;
+    (void) data;
+    // string swizzle;
+    // const char* pSwizzle = reinterpret_cast<const char*>(value);
+    // if (value[valueLen - 1] != '\0') {
+    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+    //     // See comment in validateOrientation.
+    //     swizzle.assign(pSwizzle, valueLen);
+    //     pSwizzle = swizzle.c_str();
+    // }
+    // if (!regex_match(pSwizzle, regex("^[rgba01]{4}$")))
+    //     addIssue(logger::eError, Metadata.InvalidValue, key);
+}
+
+void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* data, uint32_t size) {
+    (void) key;
+    (void) data;
+    (void) size;
+    // if (data[size - 1] != '\0')
+    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+}
+
+void ValidationContext::validateKVWriterScParams(std::string_view key, const uint8_t* data, uint32_t size) {
+    (void) key;
+    (void) data;
+    (void) size;
+    // if (value[valueLen-1] != '\0')
+    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+}
+
+void ValidationContext::validateKVAstcDecodeMode(std::string_view key, const uint8_t* data, uint32_t size) {
+    (void) key;
+    (void) data;
+    (void) size;
+    // if (valueLen == 0) {
+    //     addIssue(logger::eError, Metadata.MissingValue, key);
+    //     return;
+    // }
+    //
+    // if (!regex_match((char*)value, regex("rgb9e5"))
+    //    && !regex_match((char*)value, regex("unorm8")))
+    //      addIssue(logger::eError, Metadata.InvalidValue, key);
+    //
+    // if (!ctx.pActualDfd)
+    //     return;
+    //
+    // uint32_t* bdb = ctx.pDfd4Format + 1;
+    // if (KHR_DFDVAL(bdb, MODEL) != KHR_DF_MODEL_ASTC) {
+    //      addIssue(logger::eError, Metadata.NotAllowed, key,
+    //               "for non-ASTC texture formats");
+    // }
+    // if (KHR_DFDVAL(bdb, TRANSFER) == KHR_DF_TRANSFER_SRGB) {
+    //      addIssue(logger::eError, Metadata.NotAllowed, key,
+    //               "with sRGB transfer function");
+    // }
+}
+
+void ValidationContext::validateKVAnimData(std::string_view key, const uint8_t* data, uint32_t size) {
+    if (size != 12)
+        error(Metadata::InvalidSizeKTXanimData, size);
+
+    (void) key;
+    (void) data;
+    // if (ctx.cubemapIncompleteFound) {
+    //      addIssue(logger::eError, Metadata.NotAllowed, key,
+    //               "together with KTXcubemapIncomplete");
+    // }
+    // if (ctx.layerCount == 0)
+    //     addIssue(logger::eError, Metadata.NotAllowed, key,
+    //              "except with array textures");
+}
+
+// =================================================================================================
+// TODO Tools P2: Validate SGD
 //
 // void
 // ktxValidator::validateSgd(validationContext& ctx)
@@ -1216,5 +1304,7 @@ void ValidationContext::validateIndices() {
 //     }
 //     return retval;
 // }
+//
+// =================================================================================================
 
 } // namespace ktx
