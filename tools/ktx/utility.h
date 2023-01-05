@@ -66,6 +66,16 @@ template <typename T>
     return reinterpret_cast<T*>(align(reinterpret_cast<std::uintptr_t>(ptr), alignment));
 }
 
+// C++20 - std::popcount
+template <typename T>
+[[nodiscard]] constexpr inline int popcount(T value) noexcept {
+    int count = 0;
+    for (; value != 0; value >>= 1)
+        if (value & 1)
+            count++;
+    return count;
+}
+
 // C++20 - string.starts_with(prefix)
 [[nodiscard]] constexpr inline bool starts_with(std::string_view string, std::string_view prefix) noexcept {
     return prefix == string.substr(0, prefix.size());

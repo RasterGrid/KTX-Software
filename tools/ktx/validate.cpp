@@ -87,12 +87,18 @@ private:
     uint32_t numError = 0;
     uint32_t numWarning = 0;
 
-public:
+private:
     KTX_header2 header{};
 
     uint32_t layerCount = 0;
     uint32_t levelCount = 0;
     uint32_t dimensionCount = 0;
+
+private:
+    bool foundKTXanimData = false;
+    bool foundKTXcubemapIncomplete = false;
+    bool foundKTXwriter = false;
+    bool foundKTXwriterScParams = false;
 
 public:
     ValidationContext(bool warningsAsErrors, std::function<void(const ValidationReport&)> callback) :
@@ -1009,15 +1015,7 @@ void ValidationContext::validateKVD() {
     kvValidators.emplace("KTXastcDecodeMode", &ValidationContext::validateKVAstcDecodeMode);
     kvValidators.emplace("KTXanimData", &ValidationContext::validateKVAnimData);
 
-    bool foundKTXwriter = false;
-    bool foundKTXwriterScParams = false;
-
     for (const auto& entry : entries) {
-        if (entry.key == "KTXwriter")
-            foundKTXwriter = true;
-        if (entry.key == "KTXwriterScParams")
-            foundKTXwriterScParams = true;
-
         const auto it = kvValidators.find(entry.key);
         if (it == kvValidators.end()) {
             if (starts_with(entry.key, "KTX") || starts_with(entry.key, "ktx"))
@@ -1031,6 +1029,10 @@ void ValidationContext::validateKVD() {
         (this->*it->second)(entry.key, entry.data, entry.size);
     }
 
+    // TODO Tools P5: error on KTXanimData with KTXcubemapIncomplete
+    // if (foundKTXanimData && foundKTXcubemapIncomplete)
+    //     error(Metadata.NotAllowed, key, "together with KTXcubemapIncomplete");
+
     if (!foundKTXwriter) {
         if (foundKTXwriterScParams)
             error(Metadata::NoRequiredKTXwriter);
@@ -1040,21 +1042,45 @@ void ValidationContext::validateKVD() {
 }
 
 void ValidationContext::validateKVCubemapIncomplete(std::string_view key, const uint8_t* data, uint32_t size) {
-    // cubemapIncomplete must be checked before animData.
-    // cubemapIncompleteFound = true;
+    (void) key;
+    foundKTXcubemapIncomplete = true;
 
     if (size != 1)
-        error(Metadata::InvalidSizeKTXcubemapIncomplete, size);
+        error(Metadata::KTXcubemapIncompleteInvalidSize, size);
 
-    (void) key;
-    (void) data;
-    // if (size > 0 && (*data & 0b11000000u) != 0)
-    //     error(Metadata::CubemapIncompleteInvalidValue, *data);
+    if (size == 0)
+        return;
+
+    uint8_t value = *data;
+
+    if (size > 0 && (value & 0b11000000u) != 0)
+        error(Metadata::KTXcubemapIncompleteInvalidValue, value);
+
+    value = value & 0b00111111u; // Error recovery
+
+    const auto popCount = popcount(value & 0b11000000u);
+    if (popCount == 6)
+        warning(Metadata::KTXcubemapIncompleteAllBitSet);
+
+    if (popCount == 0)
+        error(Metadata::KTXcubemapIncompleteNoBitSet);
+
+    if (popCount != 0 && (layerCount % popCount != 0))
+        error(Metadata::KTXcubemapIncompleteIncompatibleLayerCount, header.layerCount, popCount);
+
+    if (header.faceCount != 1)
+        error(Metadata::KTXcubemapIncompleteWithFaceCountNot1, header.faceCount);
+
+    if (header.pixelHeight != header.pixelWidth)
+        error(HeaderData::CubeHeightWidthMismatch, header.pixelWidth, header.pixelHeight);
+
+    if (header.pixelDepth != 0)
+        error(HeaderData::CubeWithDepth, header.pixelDepth);
 }
 
 void ValidationContext::validateKVOrientation(std::string_view key, const uint8_t* data, uint32_t size) {
     if (size < 3 || size > 5) {
-        error(Metadata::InvalidSizeKTXorientation, size);
+        error(Metadata::KTXorientationInvalidSize, size);
         return;
     }
 
@@ -1133,6 +1159,8 @@ void ValidationContext::validateKVSwizzle(std::string_view key, const uint8_t* d
 }
 
 void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* data, uint32_t size) {
+    foundKTXwriter = true;
+
     (void) key;
     (void) data;
     (void) size;
@@ -1141,6 +1169,8 @@ void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* da
 }
 
 void ValidationContext::validateKVWriterScParams(std::string_view key, const uint8_t* data, uint32_t size) {
+    foundKTXwriterScParams = true;
+
     (void) key;
     (void) data;
     (void) size;
@@ -1176,15 +1206,14 @@ void ValidationContext::validateKVAstcDecodeMode(std::string_view key, const uin
 }
 
 void ValidationContext::validateKVAnimData(std::string_view key, const uint8_t* data, uint32_t size) {
+    foundKTXanimData = true;
+
     if (size != 12)
         error(Metadata::InvalidSizeKTXanimData, size);
 
     (void) key;
     (void) data;
-    // if (ctx.cubemapIncompleteFound) {
-    //      addIssue(logger::eError, Metadata.NotAllowed, key,
-    //               "together with KTXcubemapIncomplete");
-    // }
+
     // if (ctx.layerCount == 0)
     //     addIssue(logger::eError, Metadata.NotAllowed, key,
     //              "except with array textures");

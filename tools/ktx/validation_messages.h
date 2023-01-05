@@ -454,12 +454,33 @@ struct Metadata {
         "There is a duplicate key, but the keys must be unique."
     };
 
-    static constexpr IssueError InvalidSizeKTXcubemapIncomplete{
-        70, "Invalid KTXcubemapIncomplete metadata. The size of the value must be 1 byte.",
+    static constexpr IssueError KTXcubemapIncompleteInvalidSize{
+        7100, "Invalid KTXcubemapIncomplete metadata. The size of the value must be 1 byte.",
         "The size of KTXcubemapIncomplete value is {}, but it must be 1 byte."
     };
-    static constexpr IssueError InvalidSizeKTXorientation{
-        70, "Invalid KTXorientation metadata. The size of the value must be 3 to 5 byte (including the NULL terminator).",
+    static constexpr IssueError KTXcubemapIncompleteInvalidValue{
+        7101, "Invalid KTXcubemapIncomplete value. The two MSB must be 0.",
+        "The value was {:08b} but the two MSB must be 0 (00XXXXXX)."
+    };
+    static constexpr IssueWarning KTXcubemapIncompleteAllBitSet{
+        7102, "KTXcubemapIncomplete is not incomplete. All face is marked present.",
+        "All face bit is set as present. Prefer using normal Cube maps instead."
+    };
+    static constexpr IssueError KTXcubemapIncompleteNoBitSet{
+        7103, "Invalid KTXcubemapIncomplete value. No face is marked present.",
+        "No face bit was set as present, but at least 1 face must be present."
+    };
+    static constexpr IssueError KTXcubemapIncompleteIncompatibleLayerCount{
+        7104, "Incompatible KTXcubemapIncomplete and layerCount. layerCount must be the multiple of the number of faces present.",
+        "layerCount is {} and KTXcubemapIncomplete indicates {} faces present, but layerCount must the multiple of the number of faces present."
+    };
+    static constexpr IssueError KTXcubemapIncompleteWithFaceCountNot1{
+        7105, "Invalid faceCount. faceCount must be 1 if KTXcubemapIncomplete is present.",
+        "faceCount is {}, but if KTXcubemapIncomplete is present it must be 1."
+    };
+
+    static constexpr IssueError KTXorientationInvalidSize{
+        7106, "Invalid KTXorientation metadata. The size of the value must be 3 to 5 byte (including the NULL terminator).",
         "The size of KTXorientation value is {}, but it must be 3 to 5 byte (including the NULL terminator)."
     };
     static constexpr IssueError InvalidSizeKTXglFormat{
@@ -491,11 +512,6 @@ struct Metadata {
         70, "Missing KTXwriter metadata. Writers are strongly urged to identify themselves via this.",
         "KTXwriter metadata is missing. Writers are strongly urged to identify themselves via this."
     };
-
-    // static constexpr IssueError CubemapIncompleteInvalidValue{
-    //     70, "",
-    //     "{} has invalid value."
-    // };
 
     // static constexpr IssueWarning ValueNotNulTerminated{
     //     70, "{} value missing encouraged NUL termination."
