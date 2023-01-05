@@ -26,7 +26,9 @@ set(CASELIST
     input/validate/error_3013_CubeWithDepth.json
     input/validate/warning_3014_ThreeDArray.json
     input/validate/error_3016_TooManyMipLevels.json
-    input/validate/error_3017_BlockCompressedNoLevel.json)
+    input/validate/error_3017_BlockCompressedNoLevel.json
+    input/validate/warning_3018_VendorSupercompression.json
+    input/validate/error_3019_InvalidSupercompression.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
 

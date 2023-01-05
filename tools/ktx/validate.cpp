@@ -407,7 +407,7 @@ void ValidationContext::validateHeader() {
             error(HeaderData::BlockCompressedNoLevel, toStringVkFormat(vkFormat));
 
     // Validate supercompressionScheme
-    if (KTX_SS_BEGIN_VENDOR_RANGE < header.supercompressionScheme && header.supercompressionScheme <= KTX_SS_END_VENDOR_RANGE)
+    if (KTX_SS_BEGIN_VENDOR_RANGE <= header.supercompressionScheme && header.supercompressionScheme <= KTX_SS_END_VENDOR_RANGE)
         warning(HeaderData::VendorSupercompression, header.supercompressionScheme);
     else if (header.supercompressionScheme < KTX_SS_BEGIN_RANGE || KTX_SS_END_RANGE < header.supercompressionScheme)
         error(HeaderData::InvalidSupercompression, header.supercompressionScheme);
