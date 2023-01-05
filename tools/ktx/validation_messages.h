@@ -159,7 +159,7 @@ struct HeaderData {
     };
     static constexpr IssueError CubeWithDepth{
         3013, "Invalid pixelDepth. pixelDepth must be 0 for cube maps.",
-        "pixelDepth is {} but for cube maps it must be 0. (Cube map faces must be 2D.)"
+        "pixelDepth is {} but for cube maps it must be 0 (cube map faces must be 2D)."
     };
     static constexpr IssueWarning ThreeDArray{
         3014, "File contains a 3D array texture.",

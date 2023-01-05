@@ -21,7 +21,8 @@ set(CASELIST
     input/validate/error_3006_WidthZero.json
     input/validate/error_3007_BlockCompressedNoHeight.json
     input/validate/error_3008_CubeHeightWidthMismatch.json
-    input/validate/error_3009_DepthNoHeight.json)
+    input/validate/error_3009_DepthNoHeight.json
+    input/validate/error_3013_CubeWithDepth.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
 
