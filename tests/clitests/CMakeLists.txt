@@ -22,6 +22,7 @@ set(CASELIST
     input/validate/error_3007_BlockCompressedNoHeight.json
     input/validate/error_3008_CubeHeightWidthMismatch.json
     input/validate/error_3009_DepthNoHeight.json
+    input/validate/error_3010_DepthBlockCompressedNoDepth.json
     input/validate/error_3013_CubeWithDepth.json
     input/validate/warning_3014_ThreeDArray.json
     input/validate/error_3016_TooManyMipLevels.json

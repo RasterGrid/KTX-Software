@@ -146,8 +146,8 @@ struct HeaderData {
         "pixelHeight is 0 and pixelDepth is {}, but pixelHeight cannot be 0 if pixelDepth is not 0 as well."
     };
     static constexpr IssueError DepthBlockCompressedNoDepth{
-        3010, "Invalid pixelDepth. pixelDepth cannot be 0 for block-compressed formats with not zero block depth.",
-        "pixelDepth is 0, but for format {} (which is block-compressed formats with not zero block depth) it cannot be 0."
+        3010, "Invalid pixelDepth. pixelDepth cannot be 0 for block-compressed formats with non-zero block depth.",
+        "pixelDepth is 0, but for format {} (which is a block-compressed format with non-zero block depth) it cannot be 0."
     };
     static constexpr IssueError DepthFormatWithDepth{
         3011, "Invalid pixelDepth. pixelDepth must be 0 for depth formats.",

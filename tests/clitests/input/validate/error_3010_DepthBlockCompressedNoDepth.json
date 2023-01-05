@@ -1,0 +1,28 @@
+{
+    "description": "pixelDepth must not be 0 for block-compressed formats that have block depth greater than 1.",
+    "command": "ktx validate --format ${format[name]} input/images/error_3010_DepthBlockCompressedNoDepth_${vkformat}.ktx2",
+    "status": 3,
+    "stdout": "golden/validate/error_3010_DepthBlockCompressedNoDepth_${vkformat}.out.${format[ext]}",
+    "args": {
+        "format": [
+            {
+                "name": "text",
+                "ext": "txt"
+            },
+            {
+                "name": "json",
+                "ext": "json"
+            },
+            {
+                "name": "mini-json",
+                "ext": "mini.json"
+            }
+        ],
+        "vkformat": [
+            "ASTC_3x3x3_UNORM_BLOCK_EXT",
+            "ASTC_4x4x3_SFLOAT_BLOCK_EXT",
+            "ASTC_5x4x4_SRGB_BLOCK_EXT",
+            "ASTC_6x6x5_UNORM_BLOCK_EXT"
+        ]
+    }
+}
