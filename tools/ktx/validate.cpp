@@ -71,7 +71,7 @@ public:
 
 struct ValidationContext {
 private:
-    static constexpr uint32_t MAX_NUM_KV_ENTRY = 100;
+    static constexpr int32_t MAX_NUM_KV_ENTRY = 100;
 
 private:
     const char* fileData = nullptr;
@@ -131,15 +131,19 @@ private:
     }
 
 private:
-    void seek_to(std::size_t target) {
+    void seek_to(std::size_t target, std::string_view name) {
         // TODO Tools P5: Switch to a different seeking/reading pattern
-        assert(fileIt < fileData + target); // To ensure forward seeking only
+        assert(fileIt <= fileData + target); // To ensure forward seeking only
+
+        if (target > fileSize)
+            fatal(IOError::UnexpectedEOFSeek, target, name, fileSize);
+
         fileIt = fileData + target;
     }
 
     void read(void* readDst, std::size_t readSize, std::string_view name) {
-        if (fileIt + readSize >= fileData + fileSize)
-            fatal(IOError::UnexpectedEOF, readSize, readSize - (fileData + fileSize - fileIt), name);
+        if (fileIt + readSize > fileData + fileSize)
+            fatal(IOError::UnexpectedEOF, readSize, name, fileData + fileSize - fileIt);
 
         std::memcpy(readDst, fileIt, readSize);
     }
@@ -293,17 +297,19 @@ void ValidationContext::validateHeader() {
         fatal(FileError::NotKTX2);
 
     // Validate vkFormat
-    if (isProhibitedFormat(vkFormat))
+    if (isProhibitedFormat(vkFormat)) {
         error(HeaderData::ProhibitedFormat, toStringVkFormat(vkFormat));
 
-    if (vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM && !isValidFormat(vkFormat))
-        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
-    if (VK_FORMAT_MAX_STANDARD_ENUM < vkFormat && vkFormat < 1000001000)
-        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
-    if (1000001000 <= vkFormat && vkFormat < VK_FORMAT_MAX_ENUM)
-        warning(HeaderData::UnknownFormat, toStringVkFormat(vkFormat));
-    if (VK_FORMAT_MAX_ENUM < vkFormat)
-        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+    } else {
+        if (vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM && !isValidFormat(vkFormat))
+            error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+        if (VK_FORMAT_MAX_STANDARD_ENUM < vkFormat && vkFormat < 1000001000)
+            error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+        if (1000001000 <= vkFormat && static_cast<uint32_t>(vkFormat) <= static_cast<uint32_t>(VK_FORMAT_MAX_ENUM))
+            warning(HeaderData::UnknownFormat, toStringVkFormat(vkFormat));
+        if (static_cast<uint32_t>(VK_FORMAT_MAX_ENUM) < static_cast<uint32_t>(vkFormat))
+            error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
+    }
 
     if (header.supercompressionScheme == KTX_SS_BASIS_LZ) {
         if (header.vkFormat != VK_FORMAT_UNDEFINED)
@@ -313,7 +319,7 @@ void ValidationContext::validateHeader() {
     // Validate typeSize
     if (header.vkFormat == VK_FORMAT_UNDEFINED) {
         if (header.typeSize != 1)
-            error(HeaderData::TypeSizeNotOne, header.typeSize, toStringVkFormat(vkFormat));
+            error(HeaderData::TypeSizeNotOne, header.typeSize, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
 
     } else {
         if (header.supercompressionScheme != KTX_SS_BASIS_LZ) {
@@ -357,13 +363,9 @@ void ValidationContext::validateHeader() {
         if (header.pixelDepth == 0)
             error(HeaderData::DepthBlockCompressedNoDepth, toStringVkFormat(vkFormat));
 
-    if (isFormatDepth(vkFormat))
+    if (isFormatDepth(vkFormat) || isFormatStencil(vkFormat))
         if (header.pixelDepth != 0)
-            error(HeaderData::DepthFormatWithDepth, header.pixelDepth, toStringVkFormat(vkFormat));
-
-    if (isFormatStencil(vkFormat))
-        if (header.pixelDepth != 0)
-            error(HeaderData::StencilFormatWithDepth, header.pixelDepth, toStringVkFormat(vkFormat));
+            error(HeaderData::DepthOrStencilFormatWithDepth, header.pixelDepth, toStringVkFormat(vkFormat));
 
     if (header.faceCount == 6)
         if (header.pixelDepth != 0)
@@ -876,7 +878,7 @@ void ValidationContext::validateIndices() {
 // =================================================================================================
 
 void ValidationContext::validateKVD() {
-    seek_to(header.keyValueData.byteOffset);
+    seek_to(header.keyValueData.byteOffset, "the KVD");
 
     if (header.keyValueData.byteLength == 0)
         return; // There is no KVD block
@@ -921,7 +923,7 @@ void ValidationContext::validateKVD() {
         const auto* ptrKeyValuePair = ptrEntry + sizeof(uint32_t);
         const auto* ptrKey = ptrKeyValuePair;
 
-        if (ptrKeyValuePair + sizeKeyValuePair >= ptrKVDEnd) {
+        if (ptrKeyValuePair + sizeKeyValuePair > ptrKVDEnd) {
             const auto bytesLeft = ptrKVDEnd - ptrKeyValuePair;
             error(Metadata::KeyValuePairSizeTooBig, sizeKeyValuePair, bytesLeft);
             sizeKeyValuePair = static_cast<uint32_t>(bytesLeft); // Attempt recovery to read out at least the key

@@ -29,17 +29,17 @@ namespace ktx {
     if (str != "VK_UNKNOWN_FORMAT")
         return str;
 
-    return fmt::format("(0x{:X})", static_cast<uint64_t>(format));
+    return fmt::format("(0x{:X})", static_cast<uint32_t>(format));
 }
 
 [[nodiscard]] inline std::string toStringKTXSupercmpScheme(ktxSupercmpScheme scheme) noexcept {
     std::string str = ktxSupercompressionSchemeString(scheme);
 
     if (str == "Invalid scheme value")
-        str = fmt::format("(0x{:X})", static_cast<uint64_t>(scheme));
+        str = fmt::format("(0x{:X})", static_cast<uint32_t>(scheme));
 
     else if (str == "Vendor scheme")
-        str = fmt::format("Vendor (0x{:X})", static_cast<uint64_t>(scheme));
+        str = fmt::format("Vendor (0x{:X})", static_cast<uint32_t>(scheme));
 
     return str;
 }

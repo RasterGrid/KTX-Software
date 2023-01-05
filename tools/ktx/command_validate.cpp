@@ -181,8 +181,8 @@ int CommandValidate::validate(const _tstring& infile, bool warningsAsErrors, Opt
             pi(2, "{{{}", nl);
             pi(3, "\"id\":{}{},{}", space, issue.id, nl);
             pi(3, "\"type\":{}\"{}\",{}", space, toString(issue.type), nl);
-            pi(3, "\"message\":{}\"{}\",{}", space, replace_all_copy(issue.message, "\"", "\\\""), nl);
-            pi(3, "\"details\":{}\"{}\"{}", space, replace_all_copy(issue.details, "\"", "\\\""), nl);
+            pi(3, "\"message\":{}\"{}\",{}", space, escape_json_copy(issue.message), nl);
+            pi(3, "\"details\":{}\"{}\"{}", space, escape_json_copy(issue.details), nl);
         });
         if (!first) {
             pi(2, "}}{}", nl);

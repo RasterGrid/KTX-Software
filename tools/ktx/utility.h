@@ -104,12 +104,23 @@ constexpr inline void sort(Range& range, Comp&& comp = {}, Proj&& proj = {}) {
     });
 }
 
-[[nodiscard]] inline std::string replace_all_copy(std::string string, std::string_view search, std::string_view replace) {
+inline void replace_all_inplace(std::string& string, std::string_view search, std::string_view replace) {
     auto pos = string.find(search);
     while (pos != std::string::npos) {
         string.replace(pos, search.size(), replace);
         pos = string.find(search, pos + replace.size());
     }
+}
+
+[[nodiscard]] inline std::string replace_all_copy(std::string string, std::string_view search, std::string_view replace) {
+    replace_all_inplace(string, search, replace);
+    return string;
+}
+
+[[nodiscard]] inline std::string escape_json_copy(std::string string) {
+    replace_all_inplace(string, "\\", "\\\\");
+    replace_all_inplace(string, "\"", "\\\"");
+    replace_all_inplace(string, "\n", "\\n");
     return string;
 }
 

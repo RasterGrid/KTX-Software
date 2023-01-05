@@ -88,6 +88,10 @@ struct IOError {
         1006, "Failed to seek to the start of the file.",
         "Failed to seek to the start of the file: {}."
     };
+    static constexpr IssueFatal UnexpectedEOFSeek{
+        1007, "Unexpected end of file. Requested seek position is not in the file.",
+        "Requested seek position is {} for accessing {}, but the file is only {} byte long."
+    };
 };
 
 struct FileError {
@@ -149,15 +153,14 @@ struct HeaderData {
         3010, "Invalid pixelDepth. pixelDepth cannot be 0 for block-compressed formats with non-zero block depth.",
         "pixelDepth is 0, but for format {} (which is a block-compressed format with non-zero block depth) it cannot be 0."
     };
-    static constexpr IssueError DepthFormatWithDepth{
-        3011, "Invalid pixelDepth. pixelDepth must be 0 for depth formats.",
-        "pixelDepth is {} but for depth format {} it must be 0."
+    static constexpr IssueError DepthOrStencilFormatWithDepth{
+        3011, "Invalid pixelDepth. pixelDepth must be 0 for depth or stencil formats.",
+        "pixelDepth is {} but for depth or stencil format {} it must be 0."
     };
-    static constexpr IssueError StencilFormatWithDepth{
-        3012, "Invalid pixelDepth. pixelDepth must be 0 for stencil formats.",
-        "pixelDepth is {} but for stencil format {} it must be 0."
-    };
-    static constexpr IssueError CubeWithDepth{
+
+    // 3012 Unused
+
+   static constexpr IssueError CubeWithDepth{
         3013, "Invalid pixelDepth. pixelDepth must be 0 for cube maps.",
         "pixelDepth is {} but for cube maps it must be 0 (cube map faces must be 2D)."
     };
@@ -202,7 +205,7 @@ struct HeaderData {
     };
     static constexpr IssueError IndexDFDInvalid{
         3023, "Invalid dataFormatDescriptor index. Defined region cannot exceed the size of the file.",
-        "dataFormatDescriptor.byteOffset is {} and dataFormatDescriptor.byteLength is {}, but the file only {} byte long."
+        "dataFormatDescriptor.byteOffset is {} and dataFormatDescriptor.byteLength is {}, but the file is only {} byte long."
     };
 
     static constexpr IssueError IndexKVDOffsetWithoutLength{
@@ -215,7 +218,7 @@ struct HeaderData {
     };
     static constexpr IssueError IndexKVDInvalid{
         3026, "Invalid keyValueData index. Defined region cannot exceed the size of the file.",
-        "keyValueData.byteOffset is {} and keyValueData.byteLength is {}, but the file only {} byte long."
+        "keyValueData.byteOffset is {} and keyValueData.byteLength is {}, but the file is only {} byte long."
     };
 
     static constexpr IssueError IndexSGDOffsetWithoutLength{
@@ -236,7 +239,7 @@ struct HeaderData {
     };
     static constexpr IssueError IndexSGDInvalid{
         3031, "Invalid supercompressionGlobalData index. Defined region cannot exceed the size of the file.",
-        "supercompressionGlobalData.byteOffset is {} and supercompressionGlobalData.byteLength is {}, but the file only {} byte long."
+        "supercompressionGlobalData.byteOffset is {} and supercompressionGlobalData.byteLength is {}, but the file is only {} byte long."
     };
 
     static constexpr IssueError IndexDFDContinuity{
