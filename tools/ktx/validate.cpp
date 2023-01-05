@@ -365,7 +365,7 @@ void ValidationContext::validateHeader() {
 
     if (isFormatDepth(vkFormat) || isFormatStencil(vkFormat))
         if (header.pixelDepth != 0)
-            error(HeaderData::DepthOrStencilFormatWithDepth, header.pixelDepth, toStringVkFormat(vkFormat));
+            error(HeaderData::DepthStencilFormatWithDepth, header.pixelDepth, toStringVkFormat(vkFormat));
 
     if (header.faceCount == 6)
         if (header.pixelDepth != 0)

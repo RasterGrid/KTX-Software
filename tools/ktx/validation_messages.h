@@ -153,7 +153,7 @@ struct HeaderData {
         3010, "Invalid pixelDepth. pixelDepth cannot be 0 for block-compressed formats with non-zero block depth.",
         "pixelDepth is 0, but for format {} (which is a block-compressed format with non-zero block depth) it cannot be 0."
     };
-    static constexpr IssueError DepthOrStencilFormatWithDepth{
+    static constexpr IssueError DepthStencilFormatWithDepth{
         3011, "Invalid pixelDepth. pixelDepth must be 0 for depth or stencil formats.",
         "pixelDepth is {} but for depth or stencil format {} it must be 0."
     };
