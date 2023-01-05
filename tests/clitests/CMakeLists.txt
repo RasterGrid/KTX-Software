@@ -18,7 +18,8 @@ set(CASELIST
     input/validate/warning_3003_UnknownFormat.json
     input/validate/error_3004_VkFormatAndBasis.json
     input/validate/error_3005_TypeSizeNotOne.json
-    input/validate/error_3006_WidthZero.json)
+    input/validate/error_3006_WidthZero.json
+    input/validate/error_3007_BlockCompressedNoHeight.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
 
