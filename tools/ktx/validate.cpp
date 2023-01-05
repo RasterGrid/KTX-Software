@@ -107,7 +107,7 @@ private:
     void warning(const IssueWarning& issue, Args&&... args) {
         if (treatWarningsAsError) {
             ++numError;
-            callback(ValidationReport{issue.type, issue.id, std::string{issue.message}, fmt::format(issue.detailsFmt, std::forward<Args>(args)...)});
+            callback(ValidationReport{IssueType::error, issue.id, std::string{issue.message}, fmt::format(issue.detailsFmt, std::forward<Args>(args)...)});
 
         } else {
             ++numWarning;
@@ -135,7 +135,7 @@ private:
         // TODO Tools P5: Switch to a different seeking/reading pattern
         assert(fileIt <= fileData + target); // To ensure forward seeking only
 
-        if (target > fileSize)
+        if (target > fileSize) // Seek to the end byte is allowed (but reading it is not allowed)
             fatal(IOError::UnexpectedEOFSeek, target, name, fileSize);
 
         fileIt = fileData + target;
@@ -291,6 +291,7 @@ void ValidationContext::validateHeader() {
 
     read(&header, sizeof(KTX_header2), "the header");
     const auto vkFormat = static_cast<VkFormat>(header.vkFormat);
+    const auto supercompressionScheme = static_cast<ktxSupercmpScheme>(header.supercompressionScheme);
 
     // Validate file identifier
     if (std::memcmp(&header.identifier, ktx2_identifier_reference, 12) != 0)
@@ -300,16 +301,16 @@ void ValidationContext::validateHeader() {
     if (isProhibitedFormat(vkFormat)) {
         error(HeaderData::ProhibitedFormat, toStringVkFormat(vkFormat));
 
-    } else {
-        if (vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM && !isValidFormat(vkFormat))
+    } else if (!isValidFormat(vkFormat)) {
+        if (vkFormat <= VK_FORMAT_MAX_STANDARD_ENUM)
             error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
         if (VK_FORMAT_MAX_STANDARD_ENUM < vkFormat && vkFormat < 1000001000)
             error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
-        if (1000001000 <= vkFormat && static_cast<uint32_t>(vkFormat) <= static_cast<uint32_t>(VK_FORMAT_MAX_ENUM))
+        if (1000001000 <= vkFormat)
             warning(HeaderData::UnknownFormat, toStringVkFormat(vkFormat));
-        if (static_cast<uint32_t>(VK_FORMAT_MAX_ENUM) < static_cast<uint32_t>(vkFormat))
-            error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
     }
+    if (vkFormat < 0)
+        error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
 
     if (header.supercompressionScheme == KTX_SS_BASIS_LZ) {
         if (header.vkFormat != VK_FORMAT_UNDEFINED)
@@ -319,30 +320,13 @@ void ValidationContext::validateHeader() {
     // Validate typeSize
     if (header.vkFormat == VK_FORMAT_UNDEFINED) {
         if (header.typeSize != 1)
-            error(HeaderData::TypeSizeNotOne, header.typeSize, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
+            error(HeaderData::TypeSizeNotOne, header.typeSize, toStringVkFormat(vkFormat));
 
-    } else {
-        if (header.supercompressionScheme != KTX_SS_BASIS_LZ) {
-            // TODO Tools P4: Clarify and implement these conditions
-
-            // createDfd4Format();
-            // if (pDfd4Format == nullptr) {
-            //     fatal(ValidatorError::CreateDfdFailure, vkFormatString(vkFormat));
-            // } else if (!extractFormatInfo(pDfd4Format)) {
-            //     error(ValidatorError::IncorrectDfd, vkFormatString(vkFormat));
-            // }
-            //
-            // if (formatInfo.isBlockCompressed) {
-            //     if (header.typeSize != 1)
-            //         error(HeaderData::TypeSizeNotOne);
-            //     if (header.levelCount == 0)
-            //         error(HeaderData::ZeroLevelCountForBC);
-            // } else {
-            //     if (header.typeSize != formatInfo.wordSize)
-            //         error(HeaderData::TypeSizeMismatch, header.typeSize);
-            // }
-        }
+    } else if (isFormatBlockCompressed(vkFormat)) {
+        if (header.typeSize != 1)
+            error(HeaderData::TypeSizeNotOne, header.typeSize, toStringVkFormat(vkFormat));
     }
+    // Additional checks are performed on typeSize after the DFD is parsed
 
     // Validate image dimensions
     if (header.pixelWidth == 0)
@@ -351,6 +335,10 @@ void ValidationContext::validateHeader() {
     if (isFormatBlockCompressed(vkFormat))
         if (header.pixelHeight == 0)
             error(HeaderData::BlockCompressedNoHeight, toStringVkFormat(vkFormat));
+    if (isSupercompressionBlockCompressed(supercompressionScheme))
+        if (header.pixelHeight == 0)
+            error(HeaderData::BlockCompressedNoHeight, toStringKTXSupercmpScheme(supercompressionScheme));
+    // Additional block-compressed formats (like UASTC) are detected after the DFD is parsed to validate pixelHeight
 
     if (header.faceCount == 6)
         if (header.pixelWidth != header.pixelHeight)
@@ -391,9 +379,18 @@ void ValidationContext::validateHeader() {
     // Validate faceCount
     if (header.faceCount != 6 && header.faceCount != 1)
         error(HeaderData::InvalidFaceCount, header.faceCount);
-    // The fact that cube map faces are 2D is validated by: CubeHeightWidthMismatch and CubeWithDepth
+
+    // Cube map faces are validated 2D by checking: CubeHeightWidthMismatch and CubeWithDepth
 
     // Validate levelCount
+    if (isFormatBlockCompressed(vkFormat))
+        if (header.levelCount == 0)
+            error(HeaderData::BlockCompressedNoLevel, toStringVkFormat(vkFormat));
+    if (isSupercompressionBlockCompressed(supercompressionScheme))
+        if (header.levelCount == 0)
+            error(HeaderData::BlockCompressedNoLevel, toStringKTXSupercmpScheme(supercompressionScheme));
+    // Additional block-compressed formats (like UASTC) are detected after the DFD is parsed to validate levelCount
+
     levelCount = std::max(header.levelCount, 1u);
 
     // This test works for arrays too because height or depth will be 0.
@@ -404,10 +401,6 @@ void ValidationContext::validateHeader() {
         error(HeaderData::TooManyMipLevels, levelCount, max_dim);
     }
 
-    if (isFormatBlockCompressed(vkFormat))
-        if (levelCount == 0)
-            error(HeaderData::BlockCompressedNoLevel, toStringVkFormat(vkFormat));
-
     // Validate supercompressionScheme
     if (KTX_SS_BEGIN_VENDOR_RANGE <= header.supercompressionScheme && header.supercompressionScheme <= KTX_SS_END_VENDOR_RANGE)
         warning(HeaderData::VendorSupercompression, header.supercompressionScheme);
@@ -416,6 +409,7 @@ void ValidationContext::validateHeader() {
 }
 
 void ValidationContext::validateIndices() {
+    const auto supercompressionScheme = static_cast<ktxSupercmpScheme>(header.supercompressionScheme);
 
     // Validate dataFormatDescriptor index
     if (header.dataFormatDescriptor.byteOffset == 0)
@@ -449,12 +443,12 @@ void ValidationContext::validateIndices() {
     if (header.supercompressionGlobalData.byteOffset % 8 != 0)
         error(HeaderData::IndexSGDAlignment, header.supercompressionGlobalData.byteOffset);
 
-    if (isSupercompressionWithGlobalData(static_cast<ktxSupercmpScheme>(header.supercompressionScheme))) {
+    if (isSupercompressionWithGlobalData(supercompressionScheme)) {
         if (header.supercompressionGlobalData.byteLength == 0)
-            error(HeaderData::IndexSGDMissing, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
+            error(HeaderData::IndexSGDMissing, toStringKTXSupercmpScheme(supercompressionScheme));
     } else {
         if (header.supercompressionGlobalData.byteLength != 0)
-            error(HeaderData::IndexSGDExists, header.supercompressionGlobalData.byteLength, toStringKTXSupercmpScheme(static_cast<ktxSupercmpScheme>(header.supercompressionScheme)));
+            error(HeaderData::IndexSGDExists, header.supercompressionGlobalData.byteLength, toStringKTXSupercmpScheme(supercompressionScheme));
     }
 
     if (header.supercompressionGlobalData.byteOffset + header.supercompressionGlobalData.byteLength > fileSize)
@@ -598,6 +592,28 @@ void ValidationContext::validateIndices() {
 // {
 //     if (ctx.header.dataFormatDescriptor.byteLength == 0)
 //         return;
+//
+//         Check that are deferred during header parsing so the DFD is available
+//         if (header.supercompressionScheme != KTX_SS_BASIS_LZ) {
+//            // TODO Tools P4: Clarify and implement these conditions
+//
+//            // createDfd4Format();
+//            // if (pDfd4Format == nullptr) {
+//            //     fatal(ValidatorError::CreateDfdFailure, vkFormatString(vkFormat));
+//            // } else if (!extractFormatInfo(pDfd4Format)) {
+//            //     error(ValidatorError::IncorrectDfd, vkFormatString(vkFormat));
+//            // }
+//            //
+//            // if (formatInfo.isBlockCompressed) {
+//            //     if (header.typeSize != 1)
+//            //         error(HeaderData::TypeSizeNotOne);
+//            //     if (header.levelCount == 0)
+//            //         error(HeaderData::ZeroLevelCountForBC);
+//            // } else {
+//            //     if (header.typeSize != formatInfo.wordSize)
+//            //         error(HeaderData::TypeSizeMismatch, header.typeSize);
+//            // }
+//         }
 //
 //     // We are right after the levelIndex. We've already checked that
 //     // header.dataFormatDescriptor.byteOffset points to this location.

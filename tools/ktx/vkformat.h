@@ -83,6 +83,15 @@ namespace ktx {
     }
 }
 
+[[nodiscard]] constexpr inline bool isSupercompressionBlockCompressed(ktxSupercmpScheme scheme) noexcept {
+    switch (scheme) {
+    case KTX_SS_BASIS_LZ:
+        return true;
+    default:
+        return false;
+    }
+}
+
 [[nodiscard]] constexpr inline bool isFormatBlockCompressed(VkFormat format) noexcept {
     switch (format) {
     case VK_FORMAT_BC1_RGB_UNORM_BLOCK: [[fallthrough]];

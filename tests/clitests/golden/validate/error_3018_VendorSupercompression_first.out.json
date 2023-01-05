@@ -3,7 +3,7 @@
     "messages": [
         {
             "id": 3018,
-            "type": "warning",
+            "type": "error",
             "message": "Using vendor supercompressionScheme. Cannot validate.",
             "details": "supercompressionScheme is 0x10000 which falls into the reserved vendor range. Cannot validate."
         }

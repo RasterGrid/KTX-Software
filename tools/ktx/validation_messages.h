@@ -178,7 +178,7 @@ struct HeaderData {
     };
     static constexpr IssueError BlockCompressedNoLevel{
         3017, "Invalid levelCount. levelCount cannot be 0 for block-compressed formats.",
-        "levelCount is 0 but for block-compressed format {} in cannot be 0."
+        "levelCount is 0 but for block-compressed format {} it cannot be 0."
     };
     static constexpr IssueWarning VendorSupercompression{
         3018, "Using vendor supercompressionScheme. Cannot validate.",
