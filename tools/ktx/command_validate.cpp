@@ -157,7 +157,7 @@ int CommandValidate::validate(const _tstring& infile, bool warningsAsErrors, Opt
     case Options::OutputFormat::text:
         return validateFile(infile, warningsAsErrors, [](const ValidationReport& issue) {
             fmt::print("{}-{:04}: {}\n", toString(issue.type), issue.id, issue.message);
-            fmt::print("    {}", issue.details);
+            fmt::print("    {}\n", issue.details);
         });
 
     case Options::OutputFormat::json: [[fallthrough]];

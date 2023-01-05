@@ -112,7 +112,7 @@ struct HeaderData {
         3002, "Invalid VkFormat.",
         "Invalid VkFormat {}."
     };
-    static constexpr IssueWarning VendorFormat{
+    static constexpr IssueWarning UnknownFormat{
         3003, "Unknown VkFormat. Possibly an extension format.",
         "Unknown VkFormat {}, possibly an extension format."
     };

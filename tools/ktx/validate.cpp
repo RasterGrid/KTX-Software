@@ -301,7 +301,7 @@ void ValidationContext::validateHeader() {
     if (VK_FORMAT_MAX_STANDARD_ENUM < vkFormat && vkFormat < 1000001000)
         error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
     if (1000001000 <= vkFormat && vkFormat < VK_FORMAT_MAX_ENUM)
-        warning(HeaderData::VendorFormat, toStringVkFormat(vkFormat));
+        warning(HeaderData::UnknownFormat, toStringVkFormat(vkFormat));
     if (VK_FORMAT_MAX_ENUM < vkFormat)
         error(HeaderData::InvalidFormat, toStringVkFormat(vkFormat));
 

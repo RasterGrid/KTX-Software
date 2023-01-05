@@ -16,7 +16,7 @@ import shutil
 class SubcaseContext:
     def __init__(self, args):
         self.args = args
-        self.pattern = re.compile("\$\{(\{[a-zA-Z0-9_-]+\})\}")
+        self.pattern = re.compile("\$\{(\{[a-zA-Z0-9_\-\[\]']+\})\}")
 
     def eval(self, value):
         return self.pattern.sub(lambda m: m.group(1), value.replace('{', '{{').replace('}', '}}')).format(**self.args)
@@ -51,9 +51,9 @@ if __name__ == '__main__':
         usage="clitest.py <json-test-file> [<args>]")
 
     parser.add_argument('json_test_file')
-    parser.add_argument('--regen-golden', action='store_true',
+    parser.add_argument('-r', '--regen-golden', action='store_true',
                         help='Regenerate reference files')
-    parser.add_argument('--executable-path', action='store', required=True,
+    parser.add_argument('-e', '--executable-path', action='store', required=True,
                         help='Path to use for the executed command')
 
     cli_args, unknown_args = parser.parse_known_args()
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         }
 
         try:
-            cmd_args = ctx.eval(testcase['command']).split(' ')
+            cmd_args = [ arg for arg in ctx.eval(testcase['command']).split(' ') if arg ]
             cmd_args[0] = cli_args.executable_path
 
             proc = subprocess.Popen(
@@ -155,8 +155,13 @@ if __name__ == '__main__':
             stdout, stderr = proc.communicate()
             status = proc.returncode
 
-            if status != testcase['status']:
-                subcase_messages.append(f"Expected return code '{testcase['status']}' but got '{status}'")
+            if isinstance(testcase['status'], str):
+                expected_status = int(ctx.eval(testcase['status']))
+            else:
+                expected_status = testcase['status']
+
+            if status != expected_status:
+                subcase_messages.append(f"Expected return code '{expected_status}' but got '{status}'")
                 subcase_failed = True
 
             output = {

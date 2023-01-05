@@ -10,7 +10,13 @@ set(CASELIST
     input/info/sample_text.json
     input/info/sample_json.json
     input/info/sample_mini.json
-    input/validate/sample.json)
+    input/validate/sample.json
+    input/validate/fatal_1003_UnexpectedEOF.json
+    input/validate/fatal_2001_NotKTX2.json
+    input/validate/error_3001_ProhibitedFormat.json
+    input/validate/error_3002_InvalidFormat.json
+    input/validate/warning_3003_UnknownFormat.json
+    input/validate/error_3004_VkFormatAndBasis.json)
 
 set(CASE_REGEN_GOLDEN_COMMANDS)
 

@@ -1,0 +1,22 @@
+{
+    "description": "VkFormat must be VK_FORMAT_UNDEFINED if using Basis Universal supercompression",
+    "command": "ktx validate --format ${format[name]} input/images/error_3004_VkFormatAndBasis.ktx2",
+    "status": 3,
+    "stdout": "golden/validate/error_3004_VkFormatAndBasis.out.${format[ext]}",
+    "args": {
+        "format": [
+            {
+                "name": "text",
+                "ext": "txt"
+            },
+            {
+                "name": "json",
+                "ext": "json"
+            },
+            {
+                "name": "mini-json",
+                "ext": "mini.json"
+            }
+        ]
+    }
+}

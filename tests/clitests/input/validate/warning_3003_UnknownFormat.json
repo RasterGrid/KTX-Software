@@ -1,0 +1,34 @@
+{
+    "description": "VkFormat is an unknown extension format",
+    "command": "ktx validate ${warnAsErr[flag]} --format ${format[name]} input/images/warning_3003_UnknownFormat.ktx2",
+    "status": "${warnAsErr[status]}",
+    "stdout": "golden/validate/${warnAsErr[outPrefix]}_3003_UnknownFormat.out.${format[ext]}",
+    "args": {
+        "warnAsErr": [
+            {
+                "flag": "",
+                "status": 0,
+                "outPrefix": "warning"
+            },
+            {
+                "flag": "--warnings-as-errors",
+                "status": 3,
+                "outPrefix": "error"
+            }
+        ],
+        "format": [
+            {
+                "name": "text",
+                "ext": "txt"
+            },
+            {
+                "name": "json",
+                "ext": "json"
+            },
+            {
+                "name": "mini-json",
+                "ext": "mini.json"
+            }
+        ]
+    }
+}
