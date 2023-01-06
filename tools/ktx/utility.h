@@ -82,6 +82,11 @@ template <typename T>
     return prefix == string.substr(0, prefix.size());
 }
 
+// C++20 - string.contains(char)
+[[nodiscard]] constexpr inline bool contains(std::string_view string, char c) noexcept {
+    return string.find(c) != std::string_view::npos;
+}
+
 // C++20 - std::identity
 struct identity {
     using is_transparent = void;

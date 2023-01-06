@@ -98,9 +98,10 @@ private:
     bool foundKTXanimData = false;
     bool foundKTXcubemapIncomplete = false;
     bool foundKTXdxgiFormat = false;
-    bool foundKTXmetalPixelFormat = false;
     bool foundKTXglFormat = false;
+    bool foundKTXmetalPixelFormat = false;
     bool foundKTXorientation = false;
+    bool foundKTXswizzle = false;
     bool foundKTXwriter = false;
     bool foundKTXwriterScParams = false;
 
@@ -1162,21 +1163,36 @@ void ValidationContext::validateKVMetalPixelFormat(std::string_view key, const u
 }
 
 void ValidationContext::validateKVSwizzle(std::string_view key, const uint8_t* data, uint32_t size) {
-    if (size != 5)
-        error(Metadata::InvalidSizeKTXswizzle, size);
-
     (void) key;
     (void) data;
-    // string swizzle;
-    // const char* pSwizzle = reinterpret_cast<const char*>(value);
-    // if (value[valueLen - 1] != '\0') {
-    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-    //     // See comment in validateOrientation.
-    //     swizzle.assign(pSwizzle, valueLen);
-    //     pSwizzle = swizzle.c_str();
-    // }
-    // if (!regex_match(pSwizzle, regex("^[rgba01]{4}$")))
-    //     addIssue(logger::eError, Metadata.InvalidValue, key);
+    foundKTXswizzle = true;
+
+    const auto hasNull = data[size - 1] == '\0';
+    if (!hasNull)
+        error(Metadata::KTXswizzleMissingNull, data[size - 1]);
+
+    if (isFormatStencil(static_cast<VkFormat>(header.vkFormat)) || isFormatDepth(static_cast<VkFormat>(header.vkFormat)))
+        warning(Metadata::KTXswizzleWithDepthOrStencil, toStringVkFormat(static_cast<VkFormat>(header.vkFormat)));
+
+    if (size != 5)
+        error(Metadata::KTXswizzleInvalidSize, size);
+
+    const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
+
+    for (std::size_t i = 0; i < std::min(std::size_t{4}, value.size()); ++i) {
+        // TODO Tools P4: if (!isChannelPresent(i)) {
+        if (false) {
+            if (value[i] != (i < 3 ? '0' : '1'))
+                error(Metadata::KTXswizzleInvalidValueMissingChannel, i,
+                        value[i],
+                        (i < 3 ? "color" : "alpha"),
+                        (i < 3 ? '0' : '1'));
+
+        } else {
+            if (value.size() > i && !contains("rgba01", value[i]))
+                error(Metadata::KTXswizzleInvalidValue, i, value[i]);
+        }
+    }
 }
 
 void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* data, uint32_t size) {

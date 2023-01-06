@@ -527,15 +527,28 @@ struct Metadata {
         "vkFormat is {}, but if KTXdxgiFormat__ is present it must VK_FORMAT_UNDEFINED."
     };
 
-
-
-
-
-
-    static constexpr IssueError InvalidSizeKTXswizzle{
-        70, "Invalid KTXswizzle metadata. The size of the value must be 5 byte (including the NULL terminator).",
+    static constexpr IssueError KTXswizzleInvalidSize{
+        7117, "Invalid KTXswizzle metadata. The size of the value must be 5 byte (including the NULL terminator).",
         "The size of KTXswizzle value is {}, but it must be 5 byte (including the NULL terminator)."
     };
+    static constexpr IssueError KTXswizzleMissingNull{
+        7118, "Invalid KTXswizzle metadata. The value is missing the NULL terminator.",
+        "The last byte of the value is {:d}, but it must be a NULL terminator."
+    };
+    static constexpr IssueError KTXswizzleInvalidValue{
+        7119, "Invalid KTXswizzle value. The value must match /^[rgba01]{4}$/.",
+        "The character at position {} is \"{}\", but it must be one of \"rgba01\"."
+    };
+    static constexpr IssueError KTXswizzleInvalidValueMissingChannel{
+        7120, "Invalid KTXswizzle value. The value must be \"0\" for color or \"1\" for alpha if the channels is not present.",
+        "The character at position {} is \"{}\", but that {} channel is not present so the value must be \"{}\"."
+    };
+    static constexpr IssueWarning KTXswizzleWithDepthOrStencil{
+        7121, "KTXswizzle has no effect on depth or stencil texture formats.",
+        "KTXswizzle is present but for vkFormat {} it has effect."
+    };
+
+
     static constexpr IssueError InvalidSizeKTXanimData{
         70, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
         "The size of KTXanimData value is {}, but it must be 12 byte."
