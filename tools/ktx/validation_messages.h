@@ -456,11 +456,11 @@ struct Metadata {
 
     static constexpr IssueError KTXcubemapIncompleteInvalidSize{
         7100, "Invalid KTXcubemapIncomplete metadata. The size of the value must be 1 byte.",
-        "The size of KTXcubemapIncomplete value is {}, but it must be 1 byte."
+        "The size of the KTXcubemapIncomplete value is {}, but it must be 1 byte."
     };
     static constexpr IssueError KTXcubemapIncompleteInvalidValue{
         7101, "Invalid KTXcubemapIncomplete value. The two MSB must be 0.",
-        "The value was {:08b} but the two MSB must be 0 (00XXXXXX)."
+        "The value is {:08b} but the two MSB must be 0 (00XXXXXX)."
     };
     static constexpr IssueWarning KTXcubemapIncompleteAllBitSet{
         7102, "KTXcubemapIncomplete is not incomplete. All face is marked present.",
@@ -468,7 +468,7 @@ struct Metadata {
     };
     static constexpr IssueError KTXcubemapIncompleteNoBitSet{
         7103, "Invalid KTXcubemapIncomplete value. No face is marked present.",
-        "No face bit was set as present, but at least 1 face must be present."
+        "No face bit is set as present, but at least 1 face must be present."
     };
     static constexpr IssueError KTXcubemapIncompleteIncompatibleLayerCount{
         7104, "Incompatible KTXcubemapIncomplete and layerCount. layerCount must be the multiple of the number of faces present.",
@@ -480,13 +480,34 @@ struct Metadata {
     };
 
     static constexpr IssueError KTXorientationInvalidSize{
-        7106, "Invalid KTXorientation metadata. The size of the value must be 3 to 5 byte (including the NULL terminator).",
-        "The size of KTXorientation value is {}, but it must be 3 to 5 byte (including the NULL terminator)."
+        7106, "Invalid KTXorientation metadata. The size of the value must be 2 to 4 byte (including the NULL terminator).",
+        "The size of the KTXorientation value is {}, but it must be 2 to 4 byte (including the NULL terminator)."
     };
+    static constexpr IssueError KTXorientationMissingNull{
+        7107, "Invalid KTXorientation metadata. The value is missing the NULL terminator.",
+        "The last byte of the value is {:d}, but it must be a NULL terminator."
+    };
+    static constexpr IssueError KTXorientationIncorrectDimension{
+        7108, "Invalid KTXorientation value. The number of dimensions specified must match the number of dimension in the texture type.",
+        "The value has {} dimension, but the dimension of the texture type has {} and they must match."
+    };
+    static constexpr IssueError KTXorientationInvalidValue{
+        7109, "Invalid KTXorientation value. The value must match /^[rl]$/ for 1D, /^[rl][du]$/ for 2D and /^[rl][du][oi]$/ for 3D texture types.",
+        "Dimension {} is \"{}\", but for it must be either \"{}\" or \"{}\"."
+    };
+
     static constexpr IssueError InvalidSizeKTXglFormat{
-        70, "Invalid KTXglFormat metadata. The size of the value must be 12 byte.",
+        7110, "Invalid KTXglFormat metadata. The size of the value must be 12 byte.",
         "The size of KTXglFormat value is {}, but it must be 12 byte."
     };
+
+
+
+
+
+
+
+
     static constexpr IssueError InvalidSizeKTXdxgiFormat{
         70, "Invalid KTXdxgiFormat__ metadata. The size of the value must be 4 byte.",
         "The size of KTXdxgiFormat__ value is {}, but it must be 4 byte."

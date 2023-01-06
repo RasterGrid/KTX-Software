@@ -97,6 +97,7 @@ private:
 private:
     bool foundKTXanimData = false;
     bool foundKTXcubemapIncomplete = false;
+    bool foundKTXorientation = false;
     bool foundKTXwriter = false;
     bool foundKTXwriterScParams = false;
 
@@ -367,14 +368,13 @@ void ValidationContext::validateHeader() {
 
     // Detect dimension counts
     if (header.pixelDepth != 0) {
-        if (header.layerCount != 0) {
+        dimensionCount = 3;
+        if (header.layerCount != 0)
             warning(HeaderData::ThreeDArray); // Warning on 3D Array textures
-            dimensionCount = 4;
-        } else {
-            dimensionCount = 3;
-        }
+
     } else if (header.pixelHeight != 0) {
         dimensionCount = 2;
+
     } else {
         dimensionCount = 1;
     }
@@ -1079,41 +1079,31 @@ void ValidationContext::validateKVCubemapIncomplete(std::string_view key, const 
 }
 
 void ValidationContext::validateKVOrientation(std::string_view key, const uint8_t* data, uint32_t size) {
-    if (size < 3 || size > 5) {
+    (void) key;
+    foundKTXorientation = true;
+
+    if (size < 2 || size > 4) {
         error(Metadata::KTXorientationInvalidSize, size);
         return;
     }
 
-    (void) key;
-    (void) data;
-    // string orientation;
-    // const char* pOrientation = reinterpret_cast<const char*>(value);
-    // if (value[valueLen - 1] != '\0') {
-    //     // regex_match on some platforms will fail to match an otherwise
-    //     // valid swizzle due to lack of a NUL terminator even IF there is
-    //     // no '$' at the end of the regex. Make a copy to avoid this.
-    //     orientation.assign(pOrientation, valueLen);
-    //     pOrientation = orientation.c_str();
-    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
-    // }
-    //
-    // if (valueLen != ctx.dimensionCount + 1)
-    //     addIssue(logger::eError, Metadata.InvalidValue, key);
-    //
-    // switch (ctx.dimensionCount) {
-    //   case 1:
-    //     if (!regex_match (pOrientation, regex("^[rl]$") ))
-    //         addIssue(logger::eError, Metadata.InvalidValue, key);
-    //     break;
-    //   case 2:
-    //     if (!regex_match(pOrientation, regex("^[rl][du]$")))
-    //         addIssue(logger::eError, Metadata.InvalidValue, key);
-    //     break;
-    //   case 3:
-    //     if (!regex_match(pOrientation, regex("^[rl][du][oi]$")))
-    //         addIssue(logger::eError, Metadata.InvalidValue, key);
-    //     break;
-    // }
+    const auto hasNull = data[size - 1] == '\0';
+    if (!hasNull)
+        error(Metadata::KTXorientationMissingNull, data[size - 1]);
+
+    const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
+
+    if (value.size() != dimensionCount)
+        error(Metadata::KTXorientationIncorrectDimension, value.size(), dimensionCount);
+
+    if (value.size() > 0 && value[0] != 'r' && value[0] != 'l')
+        error(Metadata::KTXorientationInvalidValue, 0, value[0], 'r', 'l');
+
+    if (value.size() > 1 && value[1] != 'd' && value[1] != 'u')
+        error(Metadata::KTXorientationInvalidValue, 1, value[1], 'd', 'u');
+
+    if (value.size() > 2 && value[2] != 'o' && value[2] != 'i')
+        error(Metadata::KTXorientationInvalidValue, 2, value[2], 'o', 'i');
 }
 
 void ValidationContext::validateKVGlFormat(std::string_view key, const uint8_t* data, uint32_t size) {
