@@ -1204,19 +1204,21 @@ void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* da
         error(Metadata::KTXwriterMissingNull);
 
     const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
-
     if (auto invalidIndex = validateUTF8(value))
         warning(Metadata::KTXwriterInvalidUTF8, *invalidIndex);
 }
 
 void ValidationContext::validateKVWriterScParams(std::string_view key, const uint8_t* data, uint32_t size) {
+    (void) key;
     foundKTXwriterScParams = true;
 
-    (void) key;
-    (void) data;
-    (void) size;
-    // if (value[valueLen-1] != '\0')
-    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+    const auto hasNull = size > 0 && data[size - 1] == '\0';
+    if (!hasNull)
+        error(Metadata::KTXwriterScParamsMissingNull);
+
+    const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
+    if (auto invalidIndex = validateUTF8(value))
+        warning(Metadata::KTXwriterScParamsInvalidUTF8, *invalidIndex);
 }
 
 void ValidationContext::validateKVAstcDecodeMode(std::string_view key, const uint8_t* data, uint32_t size) {

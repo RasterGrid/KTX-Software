@@ -565,6 +565,15 @@ struct Metadata {
         "KTXwriter metadata is missing. Writers are strongly urged to identify themselves via this."
     };
 
+    static constexpr IssueError KTXwriterScParamsMissingNull{
+        7126, "Invalid KTXwriterScParams metadata. The value is missing the NULL terminator.",
+        "The last byte of the value must be a NULL terminator."
+    };
+    static constexpr IssueWarning KTXwriterScParamsInvalidUTF8{
+        7127, "Invalid KTXwriterScParams value. The value must be a valid UTF8 string.",
+        "The value contains an invalid UTF8 character at position: {}."
+    };
+
 
     static constexpr IssueError InvalidSizeKTXanimData{
         70, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
