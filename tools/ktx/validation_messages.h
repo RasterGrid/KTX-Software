@@ -574,25 +574,18 @@ struct Metadata {
         "The value contains an invalid UTF8 character at position: {}."
     };
 
-
-    static constexpr IssueError InvalidSizeKTXanimData{
-        70, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
+    static constexpr IssueError KTXanimDataInvalidSize{
+        7128, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
         "The size of KTXanimData value is {}, but it must be 12 byte."
     };
-
-
-    // static constexpr IssueWarning ValueNotNulTerminated{
-    //     70, "{} value missing encouraged NUL termination."
-    // };
-    // static constexpr IssueError InvalidValue{
-    //     70, "{} has invalid value."
-    // };
-    // static constexpr IssueError MissingValue{
-    //     70, "Missing required value for \"{}\" key."
-    // };
-    // static constexpr IssueError NotAllowed{
-    //     70, "\"{}\" key not allowed {}."
-    // };
+    static constexpr IssueError KTXanimDataNotArray{
+        7129, "Invalid KTXanimData metadata. KTXanimData can only be used with array textures.",
+        "KTXanimData is present and layerCount is {}, but KTXanimData can only be used with array textures."
+    };
+    static constexpr IssueError KTXanimDataWithCubeIncomplete{
+        7130, "Incompatible KTXanimData and KTXcubemapIncomplete metadata. KTXanimData and KTXcubemapIncomplete cannot be present at the same time.",
+        "Both KTXanimData and KTXcubemapIncomplete is present, but they are incompatible."
+    };
 };
 
 // struct SGD {

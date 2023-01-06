@@ -1033,9 +1033,8 @@ void ValidationContext::validateKVD() {
         (this->*it->second)(entry.key, entry.data, entry.size);
     }
 
-    // TODO Tools P5: error on KTXanimData with KTXcubemapIncomplete
-    // if (foundKTXanimData && foundKTXcubemapIncomplete)
-    //     error(Metadata.NotAllowed, key, "together with KTXcubemapIncomplete");
+    if (foundKTXanimData && foundKTXcubemapIncomplete)
+        error(Metadata::KTXanimDataWithCubeIncomplete);
 
     if (!foundKTXwriter) {
         if (foundKTXwriterScParams)
@@ -1069,7 +1068,7 @@ void ValidationContext::validateKVCubemapIncomplete(std::string_view key, const 
     if (popCount == 0)
         error(Metadata::KTXcubemapIncompleteNoBitSet);
 
-    if (popCount != 0 && (layerCount % popCount != 0))
+    if (popCount != 0 && (header.layerCount % popCount != 0))
         error(Metadata::KTXcubemapIncompleteIncompatibleLayerCount, header.layerCount, popCount);
 
     if (header.faceCount != 1)
@@ -1249,17 +1248,15 @@ void ValidationContext::validateKVAstcDecodeMode(std::string_view key, const uin
 }
 
 void ValidationContext::validateKVAnimData(std::string_view key, const uint8_t* data, uint32_t size) {
+    (void) key;
+    (void) data;
     foundKTXanimData = true;
 
     if (size != 12)
-        error(Metadata::InvalidSizeKTXanimData, size);
+        error(Metadata::KTXanimDataInvalidSize, size);
 
-    (void) key;
-    (void) data;
-
-    // if (ctx.layerCount == 0)
-    //     addIssue(logger::eError, Metadata.NotAllowed, key,
-    //              "except with array textures");
+    if (header.layerCount == 0)
+        error(Metadata::KTXanimDataNotArray, header.layerCount);
 }
 
 // =================================================================================================
