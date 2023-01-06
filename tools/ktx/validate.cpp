@@ -1039,9 +1039,9 @@ void ValidationContext::validateKVD() {
 
     if (!foundKTXwriter) {
         if (foundKTXwriterScParams)
-            error(Metadata::NoRequiredKTXwriter);
+            error(Metadata::KTXwriterRequiredButMissing);
         else
-            warning(Metadata::NoKTXwriter);
+            warning(Metadata::KTXwriterMissing);
     }
 }
 
@@ -1091,9 +1091,9 @@ void ValidationContext::validateKVOrientation(std::string_view key, const uint8_
         return;
     }
 
-    const auto hasNull = data[size - 1] == '\0';
+    const auto hasNull = size > 0 && data[size - 1] == '\0';
     if (!hasNull)
-        error(Metadata::KTXorientationMissingNull, data[size - 1]);
+        error(Metadata::KTXorientationMissingNull);
 
     const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
 
@@ -1167,9 +1167,9 @@ void ValidationContext::validateKVSwizzle(std::string_view key, const uint8_t* d
     (void) data;
     foundKTXswizzle = true;
 
-    const auto hasNull = data[size - 1] == '\0';
+    const auto hasNull = size > 0 && data[size - 1] == '\0';
     if (!hasNull)
-        error(Metadata::KTXswizzleMissingNull, data[size - 1]);
+        error(Metadata::KTXswizzleMissingNull);
 
     if (isFormatStencil(static_cast<VkFormat>(header.vkFormat)) || isFormatDepth(static_cast<VkFormat>(header.vkFormat)))
         warning(Metadata::KTXswizzleWithDepthOrStencil, toStringVkFormat(static_cast<VkFormat>(header.vkFormat)));
@@ -1197,12 +1197,16 @@ void ValidationContext::validateKVSwizzle(std::string_view key, const uint8_t* d
 
 void ValidationContext::validateKVWriter(std::string_view key, const uint8_t* data, uint32_t size) {
     foundKTXwriter = true;
-
     (void) key;
-    (void) data;
-    (void) size;
-    // if (data[size - 1] != '\0')
-    //     addIssue(logger::eWarning, Metadata.ValueNotNulTerminated, key);
+
+    const auto hasNull = size > 0 && data[size - 1] == '\0';
+    if (!hasNull)
+        error(Metadata::KTXwriterMissingNull);
+
+    const auto value = std::string_view(reinterpret_cast<const char*>(data), hasNull ? size - 1 : size);
+
+    if (auto invalidIndex = validateUTF8(value))
+        warning(Metadata::KTXwriterInvalidUTF8, *invalidIndex);
 }
 
 void ValidationContext::validateKVWriterScParams(std::string_view key, const uint8_t* data, uint32_t size) {

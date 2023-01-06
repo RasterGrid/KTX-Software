@@ -485,7 +485,7 @@ struct Metadata {
     };
     static constexpr IssueError KTXorientationMissingNull{
         7107, "Invalid KTXorientation metadata. The value is missing the NULL terminator.",
-        "The last byte of the value is {:d}, but it must be a NULL terminator."
+        "The last byte of the value must be a NULL terminator."
     };
     static constexpr IssueError KTXorientationIncorrectDimension{
         7108, "Invalid KTXorientation value. The number of dimensions specified must match the number of dimension in the texture type.",
@@ -533,7 +533,7 @@ struct Metadata {
     };
     static constexpr IssueError KTXswizzleMissingNull{
         7118, "Invalid KTXswizzle metadata. The value is missing the NULL terminator.",
-        "The last byte of the value is {:d}, but it must be a NULL terminator."
+        "The last byte of the value must be a NULL terminator."
     };
     static constexpr IssueError KTXswizzleInvalidValue{
         7119, "Invalid KTXswizzle value. The value must match /^[rgba01]{4}$/.",
@@ -548,20 +548,29 @@ struct Metadata {
         "KTXswizzle is present but for vkFormat {} it has effect."
     };
 
+    static constexpr IssueError KTXwriterMissingNull{
+        7122, "Invalid KTXwriter metadata. The value is missing the NULL terminator.",
+        "The last byte of the value must be a NULL terminator."
+    };
+    static constexpr IssueWarning KTXwriterInvalidUTF8{
+        7123, "Invalid KTXwriter value. The value must be a valid UTF8 string.",
+        "The value contains an invalid UTF8 character at position: {}."
+    };
+    static constexpr IssueError KTXwriterRequiredButMissing{
+        7124, "Missing KTXwriter metadata. When KTXwriterScParams is present KTXwriter must also be present",
+        "KTXwriter metadata is missing. When KTXwriterScParams is present KTXwriter must also be present"
+    };
+    static constexpr IssueWarning KTXwriterMissing{
+        7125, "Missing KTXwriter metadata. Writers are strongly urged to identify themselves via this.",
+        "KTXwriter metadata is missing. Writers are strongly urged to identify themselves via this."
+    };
+
 
     static constexpr IssueError InvalidSizeKTXanimData{
         70, "Invalid KTXanimData metadata. The size of the value must be 12 byte.",
         "The size of KTXanimData value is {}, but it must be 12 byte."
     };
 
-    static constexpr IssueError NoRequiredKTXwriter{
-        70, "Missing KTXwriter metadata. When KTXwriterScParams is present KTXwriter must also be present",
-        "KTXwriter metadata is missing. When KTXwriterScParams is present KTXwriter must also be present"
-    };
-    static constexpr IssueWarning NoKTXwriter{
-        70, "Missing KTXwriter metadata. Writers are strongly urged to identify themselves via this.",
-        "KTXwriter metadata is missing. Writers are strongly urged to identify themselves via this."
-    };
 
     // static constexpr IssueWarning ValueNotNulTerminated{
     //     70, "{} value missing encouraged NUL termination."
