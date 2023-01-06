@@ -97,6 +97,7 @@ private:
 private:
     bool foundKTXanimData = false;
     bool foundKTXcubemapIncomplete = false;
+    bool foundKTXdxgiFormat = false;
     bool foundKTXglFormat = false;
     bool foundKTXorientation = false;
     bool foundKTXwriter = false;
@@ -1136,11 +1137,15 @@ void ValidationContext::validateKVGlFormat(std::string_view key, const uint8_t* 
 }
 
 void ValidationContext::validateKVDxgiFormat(std::string_view key, const uint8_t* data, uint32_t size) {
-    if (size != 4)
-        error(Metadata::KTXdxgiFormatInvalidSize, size);
-
     (void) key;
     (void) data;
+    foundKTXdxgiFormat = true;
+
+    if (header.vkFormat != VK_FORMAT_UNDEFINED)
+        error(Metadata::KTXdxgiFormatWithVkFormat, toStringVkFormat(static_cast<VkFormat>(header.vkFormat)));
+
+    if (size != 4)
+        error(Metadata::KTXdxgiFormatInvalidSize, size);
 }
 
 void ValidationContext::validateKVMetalPixelFormat(std::string_view key, const uint8_t* data, uint32_t size) {
