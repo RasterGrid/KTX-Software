@@ -518,15 +518,20 @@ struct Metadata {
         "vkFormat is {}, but if KTXdxgiFormat__ is present it must VK_FORMAT_UNDEFINED."
     };
 
-
-
-
-
-
-    static constexpr IssueError InvalidSizeKTXmetalPixelFormat{
-        70, "Invalid KTXmetalPixelFormat metadata. The size of the value must be 4 byte.",
+    static constexpr IssueError KTXmetalPixelFormatInvalidSize{
+        7115, "Invalid KTXmetalPixelFormat metadata. The size of the value must be 4 byte.",
         "The size of KTXmetalPixelFormat value is {}, but it must be 4 byte."
     };
+    static constexpr IssueError KTXmetalPixelFormatWithVkFormat{
+        7116, "Incompatible KTXdxgiFormat__ with vkFormat. vkFormat must be VK_FORMAT_UNDEFINED if KTXdxgiFormat__ is present.",
+        "vkFormat is {}, but if KTXdxgiFormat__ is present it must VK_FORMAT_UNDEFINED."
+    };
+
+
+
+
+
+
     static constexpr IssueError InvalidSizeKTXswizzle{
         70, "Invalid KTXswizzle metadata. The size of the value must be 5 byte (including the NULL terminator).",
         "The size of KTXswizzle value is {}, but it must be 5 byte (including the NULL terminator)."
