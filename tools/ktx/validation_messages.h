@@ -496,19 +496,23 @@ struct Metadata {
         "Dimension {} is \"{}\", but for it must be either \"{}\" or \"{}\"."
     };
 
-    static constexpr IssueError InvalidSizeKTXglFormat{
+    static constexpr IssueError KTXglFormatInvalidSize{
         7110, "Invalid KTXglFormat metadata. The size of the value must be 12 byte.",
         "The size of KTXglFormat value is {}, but it must be 12 byte."
+    };
+    static constexpr IssueError KTXglFormatWithVkFormat{
+        7111, "Incompatible KTXglFormatWithVkFormat with vkFormat. vkFormat must be VK_FORMAT_UNDEFINED if KTXglFormatWithVkFormat is present.",
+        "vkFormat is {}, but if KTXglFormatWithVkFormat is present it must VK_FORMAT_UNDEFINED."
+    };
+    static constexpr IssueError KTXglFormatInvalidValueForCompressed{
+        7112, "Invalid KTXglFormatInvalidValue value. glFormat and glType must be zero for compressed formats.",
+        "glFormat is {} and glType is {}, but for compressed formats both must be zero."
     };
 
 
 
 
-
-
-
-
-    static constexpr IssueError InvalidSizeKTXdxgiFormat{
+    static constexpr IssueError KTXdxgiFormatInvalidSize{
         70, "Invalid KTXdxgiFormat__ metadata. The size of the value must be 4 byte.",
         "The size of KTXdxgiFormat__ value is {}, but it must be 4 byte."
     };

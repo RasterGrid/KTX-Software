@@ -97,6 +97,7 @@ private:
 private:
     bool foundKTXanimData = false;
     bool foundKTXcubemapIncomplete = false;
+    bool foundKTXglFormat = false;
     bool foundKTXorientation = false;
     bool foundKTXwriter = false;
     bool foundKTXwriterScParams = false;
@@ -1107,16 +1108,36 @@ void ValidationContext::validateKVOrientation(std::string_view key, const uint8_
 }
 
 void ValidationContext::validateKVGlFormat(std::string_view key, const uint8_t* data, uint32_t size) {
-    if (size != 12)
-        error(Metadata::InvalidSizeKTXglFormat, size);
-
     (void) key;
-    (void) data;
+    foundKTXglFormat = true;
+
+    if (header.vkFormat != VK_FORMAT_UNDEFINED)
+        error(Metadata::KTXglFormatWithVkFormat, toStringVkFormat(static_cast<VkFormat>(header.vkFormat)));
+
+    if (size != 12) {
+        error(Metadata::KTXglFormatInvalidSize, size);
+        return;
+    }
+
+    struct Value {
+        uint32_t glInternalformat = 0;
+        uint32_t glFormat = 0;
+        uint32_t glType = 0;
+    };
+
+    Value value{};
+    std::memcpy(&value, data, size);
+
+    // Spec states "For compressed formats"
+    // TODO Tools P4: if (compressed format) {
+    if (false)
+        if (value.glFormat != 0 || value.glType != 0)
+            error(Metadata::KTXglFormatInvalidValueForCompressed, value.glFormat, value.glType);
 }
 
 void ValidationContext::validateKVDxgiFormat(std::string_view key, const uint8_t* data, uint32_t size) {
     if (size != 4)
-        error(Metadata::InvalidSizeKTXdxgiFormat, size);
+        error(Metadata::KTXdxgiFormatInvalidSize, size);
 
     (void) key;
     (void) data;
