@@ -1,0 +1,3 @@
+[submodule "tests/cts"]
+	path = tests/cts
+	url = git@github.com:KhronosGroup/KTX-Software-CTS.git

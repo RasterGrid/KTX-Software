@@ -43,6 +43,7 @@ option( KTX_FEATURE_LOADTEST_APPS "Create load tests apps that load and display 
 option( KTX_FEATURE_STATIC_LIBRARY "Create static libraries (shared otherwise)" ${LIB_TYPE_DEFAULT} )
 option( KTX_FEATURE_TESTS "Create unit tests" ON )
 option( KTX_FEATURE_JNI "Create Java bindings for libktx" OFF )
+option( KTX_TOOLS_TESTS "Enable KTX CLI Tools tests (requires CTS submodule)" OFF )
 
 if(POLICY CMP0127)
     # cmake_dependent_option() supports full Condition Syntax. Introduced in
